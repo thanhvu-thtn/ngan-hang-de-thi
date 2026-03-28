@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}{{ exam.title }} - Ngân Hàng Đề Thi{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <div class="card shadow-sm border-0 mb-4">
+      <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <div>
+          <h5 class="mb-0"><i class="bi bi-file-text me-2"></i>{{ exam.title }}</h5>
+          {% if exam.description %}
+          <small class="opacity-75">{{ exam.description }}</small>
+          {% endif %}
+        </div>
+        <div class="text-end">
+          <div class="badge bg-light text-primary fs-6" id="timer">
+            <i class="bi bi-clock me-1"></i><span id="timerDisplay">{{ exam.duration_minutes }}:00</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <form method="post" action="{{ url_for('submit_exam', exam_id=exam.id) }}" id="examForm">
+      {% for question in questions %}
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+          <div class="d-flex align-items-start gap-3">
+            <span class="badge bg-primary rounded-pill fs-6 flex-shrink-0">{{ loop.index }}</span>
+            <div class="flex-grow-1">
+              <p class="fw-semibold mb-3">{{ question.content }}</p>
+              {% for choice in question.choices %}
+              <div class="form-check choice-option p-2 rounded mb-1">
+                <input class="form-check-input" type="radio"
+                       name="question_{{ question.id }}" id="q{{ question.id }}_c{{ choice.id }}"
+                       value="{{ choice.id }}">
+                <label class="form-check-label w-100" for="q{{ question.id }}_c{{ choice.id }}">
+                  {{ choice.content }}
+                </label>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+
+      <div class="d-flex justify-content-between align-items-center mt-4">
+        <a href="{{ url_for('exams') }}" class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-left me-1"></i>Quay lại
+        </a>
+        <button type="submit" class="btn btn-success btn-lg px-5"
+                onclick="return confirm('Nộp bài thi? Bạn không thể thay đổi sau khi nộp.')">
+          <i class="bi bi-check2-circle me-1"></i>Nộp bài
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+let totalSeconds = {{ exam.duration_minutes }} * 60;
+
+function updateTimer() {
+  if (totalSeconds <= 0) {
+    clearInterval(timerInterval);
+    document.getElementById('examForm').submit();
+    return;
+  }
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  document.getElementById('timerDisplay').textContent =
+    String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+  if (totalSeconds <= 300) {
+    document.getElementById('timer').classList.add('bg-danger');
+    document.getElementById('timer').classList.remove('bg-light', 'text-primary');
+    document.getElementById('timer').classList.add('text-white');
+  }
+  totalSeconds--;
+}
+
+const timerInterval = setInterval(updateTimer, 1000);
+
+document.querySelectorAll('.choice-option').forEach(option => {
+  option.querySelector('input').addEventListener('change', function () {
+    option.closest('.card-body').querySelectorAll('.choice-option').forEach(o => o.classList.remove('selected'));
+    option.classList.add('selected');
+  });
+});
+</script>
+{% endblock %}

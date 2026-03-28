@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Kết quả - {{ exam.title }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <div class="card border-0 shadow mb-4">
+      <div class="card-body text-center py-5">
+        {% if percentage >= 80 %}
+          <div class="display-1 mb-2">🎉</div>
+          <h2 class="text-success fw-bold">Xuất sắc!</h2>
+        {% elif percentage >= 60 %}
+          <div class="display-1 mb-2">👍</div>
+          <h2 class="text-primary fw-bold">Tốt!</h2>
+        {% elif percentage >= 40 %}
+          <div class="display-1 mb-2">📝</div>
+          <h2 class="text-warning fw-bold">Cần cố gắng thêm</h2>
+        {% else %}
+          <div class="display-1 mb-2">📚</div>
+          <h2 class="text-danger fw-bold">Cần ôn tập nhiều hơn</h2>
+        {% endif %}
+        <h4 class="text-muted mb-4">{{ exam.title }}</h4>
+        <div class="row justify-content-center g-3">
+          <div class="col-auto">
+            <div class="p-3 border rounded text-center" style="min-width: 120px;">
+              <div class="display-5 fw-bold text-primary">{{ score }}/{{ total }}</div>
+              <div class="text-muted small">Câu đúng</div>
+            </div>
+          </div>
+          <div class="col-auto">
+            <div class="p-3 border rounded text-center" style="min-width: 120px;">
+              <div class="display-5 fw-bold {% if percentage >= 60 %}text-success{% else %}text-danger{% endif %}">
+                {{ percentage }}%
+              </div>
+              <div class="text-muted small">Điểm số</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h5 class="mb-3"><i class="bi bi-list-check me-2 text-primary"></i>Chi tiết kết quả</h5>
+    {% for result in results %}
+    <div class="card border-0 shadow-sm mb-3 {% if result.is_correct %}border-start border-success border-3{% else %}border-start border-danger border-3{% endif %}">
+      <div class="card-body">
+        <div class="d-flex align-items-start gap-3">
+          <span class="badge {% if result.is_correct %}bg-success{% else %}bg-danger{% endif %} rounded-pill fs-6 flex-shrink-0">
+            {{ loop.index }}
+          </span>
+          <div class="flex-grow-1">
+            <p class="fw-semibold mb-3">{{ result.question.content }}</p>
+            {% for choice in result.question.choices %}
+            <div class="p-2 rounded mb-1
+              {% if choice.is_correct %}bg-success-subtle text-success{% elif result.selected and result.selected.id == choice.id %}bg-danger-subtle text-danger{% else %}text-muted{% endif %}">
+              {% if choice.is_correct %}
+                <i class="bi bi-check-circle-fill me-1"></i>
+              {% elif result.selected and result.selected.id == choice.id %}
+                <i class="bi bi-x-circle-fill me-1"></i>
+              {% else %}
+                <i class="bi bi-circle me-1"></i>
+              {% endif %}
+              {{ choice.content }}
+              {% if choice.is_correct %}<strong>(Đáp án đúng)</strong>{% endif %}
+            </div>
+            {% endfor %}
+            {% if not result.selected %}
+            <div class="text-warning small mt-1">
+              <i class="bi bi-dash-circle me-1"></i>Không chọn đáp án
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+
+    <div class="d-flex gap-3 mt-4 justify-content-center">
+      <a href="{{ url_for('take_exam', exam_id=exam.id) }}" class="btn btn-primary">
+        <i class="bi bi-arrow-repeat me-1"></i>Làm lại
+      </a>
+      <a href="{{ url_for('exams') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-list me-1"></i>Danh sách đề thi
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

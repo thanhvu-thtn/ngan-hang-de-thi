@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Trang chủ - Ngân Hàng Đề Thi{% endblock %}
+{% block content %}
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="p-5 rounded-3 bg-primary text-white hero-banner">
+      <h1 class="display-5 fw-bold">
+        <i class="bi bi-journal-bookmark-fill me-3"></i>Ngân Hàng Đề Thi
+      </h1>
+      <p class="fs-5 mb-4">Hệ thống quản lý câu hỏi và đề thi trực tuyến. Tạo, quản lý và thi thử dễ dàng.</p>
+      <a href="{{ url_for('add_question') }}" class="btn btn-light btn-lg me-2">
+        <i class="bi bi-plus-circle me-1"></i>Thêm câu hỏi
+      </a>
+      <a href="{{ url_for('add_exam') }}" class="btn btn-outline-light btn-lg">
+        <i class="bi bi-file-earmark-plus me-1"></i>Tạo đề thi
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mb-5">
+  <div class="col-md-4">
+    <div class="card text-center border-0 shadow-sm h-100">
+      <div class="card-body py-4">
+        <div class="stat-icon bg-primary-subtle rounded-circle mx-auto mb-3">
+          <i class="bi bi-book text-primary fs-2"></i>
+        </div>
+        <h2 class="display-6 fw-bold text-primary">{{ subject_count }}</h2>
+        <p class="text-muted mb-3">Môn học</p>
+        <a href="{{ url_for('subjects') }}" class="btn btn-sm btn-outline-primary">Xem tất cả</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card text-center border-0 shadow-sm h-100">
+      <div class="card-body py-4">
+        <div class="stat-icon bg-success-subtle rounded-circle mx-auto mb-3">
+          <i class="bi bi-question-circle text-success fs-2"></i>
+        </div>
+        <h2 class="display-6 fw-bold text-success">{{ question_count }}</h2>
+        <p class="text-muted mb-3">Câu hỏi</p>
+        <a href="{{ url_for('questions') }}" class="btn btn-sm btn-outline-success">Xem tất cả</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card text-center border-0 shadow-sm h-100">
+      <div class="card-body py-4">
+        <div class="stat-icon bg-warning-subtle rounded-circle mx-auto mb-3">
+          <i class="bi bi-file-text text-warning fs-2"></i>
+        </div>
+        <h2 class="display-6 fw-bold text-warning">{{ exam_count }}</h2>
+        <p class="text-muted mb-3">Đề thi</p>
+        <a href="{{ url_for('exams') }}" class="btn btn-sm btn-outline-warning">Xem tất cả</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if recent_exams %}
+<div class="row">
+  <div class="col-12">
+    <h4 class="mb-3"><i class="bi bi-clock-history me-2 text-primary"></i>Đề thi gần đây</h4>
+    <div class="list-group shadow-sm">
+      {% for exam in recent_exams %}
+      <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+        <div>
+          <h6 class="mb-1 fw-semibold">{{ exam.title }}</h6>
+          <small class="text-muted">
+            <i class="bi bi-question-circle me-1"></i>{{ exam.exam_questions | length }} câu &nbsp;|&nbsp;
+            <i class="bi bi-clock me-1"></i>{{ exam.duration_minutes }} phút &nbsp;|&nbsp;
+            <i class="bi bi-calendar me-1"></i>{{ exam.created_at.strftime('%d/%m/%Y') }}
+          </small>
+        </div>
+        <a href="{{ url_for('take_exam', exam_id=exam.id) }}" class="btn btn-primary btn-sm">
+          <i class="bi bi-play-fill me-1"></i>Làm bài
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

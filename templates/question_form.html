@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Sửa câu hỏi' if question else 'Thêm câu hỏi' }} - Ngân Hàng Đề Thi{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card shadow-sm border-0">
+      <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">
+          <i class="bi bi-question-circle me-2"></i>
+          {{ 'Sửa câu hỏi' if question else 'Thêm câu hỏi mới' }}
+        </h5>
+      </div>
+      <div class="card-body p-4">
+        <form method="post" id="questionForm">
+          <div class="row g-3 mb-3">
+            <div class="col-md-8">
+              <label class="form-label fw-semibold">Môn học <span class="text-danger">*</span></label>
+              <select name="subject_id" class="form-select" required>
+                <option value="">-- Chọn môn học --</option>
+                {% for subject in subjects %}
+                <option value="{{ subject.id }}"
+                  {% if question and question.subject_id == subject.id %}selected{% endif %}>
+                  {{ subject.name }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Độ khó</label>
+              <select name="difficulty" class="form-select">
+                <option value="easy" {% if question and question.difficulty == 'easy' %}selected{% endif %}>Dễ</option>
+                <option value="medium" {% if not question or question.difficulty == 'medium' %}selected{% endif %}>Trung bình</option>
+                <option value="hard" {% if question and question.difficulty == 'hard' %}selected{% endif %}>Khó</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label fw-semibold">Nội dung câu hỏi <span class="text-danger">*</span></label>
+            <textarea name="content" class="form-control" rows="3" required
+                      placeholder="Nhập nội dung câu hỏi...">{{ question.content if question else '' }}</textarea>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label fw-semibold">
+              Đáp án <span class="text-danger">*</span>
+              <small class="text-muted fw-normal ms-2">(chọn đáp án đúng bằng radio)</small>
+            </label>
+            <div id="choicesContainer">
+              {% if question and question.choices %}
+                {% for choice in question.choices %}
+                <div class="choice-row d-flex align-items-center gap-2 mb-2">
+                  <input type="radio" name="correct_choice" value="{{ loop.index0 }}"
+                         {% if choice.is_correct %}checked{% endif %}
+                         class="form-check-input flex-shrink-0 mt-0" title="Đáp án đúng" required>
+                  <input type="text" name="choice_content" value="{{ choice.content }}"
+                         class="form-control" placeholder="Nội dung đáp án" required>
+                  <button type="button" class="btn btn-outline-danger btn-sm remove-choice flex-shrink-0"
+                          title="Xóa đáp án">
+                    <i class="bi bi-x-lg"></i>
+                  </button>
+                </div>
+                {% endfor %}
+              {% else %}
+                <div class="choice-row d-flex align-items-center gap-2 mb-2">
+                  <input type="radio" name="correct_choice" value="0" class="form-check-input flex-shrink-0 mt-0" title="Đáp án đúng" required>
+                  <input type="text" name="choice_content" class="form-control" placeholder="Đáp án A" required>
+                  <button type="button" class="btn btn-outline-danger btn-sm remove-choice flex-shrink-0" title="Xóa đáp án"><i class="bi bi-x-lg"></i></button>
+                </div>
+                <div class="choice-row d-flex align-items-center gap-2 mb-2">
+                  <input type="radio" name="correct_choice" value="1" class="form-check-input flex-shrink-0 mt-0" title="Đáp án đúng">
+                  <input type="text" name="choice_content" class="form-control" placeholder="Đáp án B" required>
+                  <button type="button" class="btn btn-outline-danger btn-sm remove-choice flex-shrink-0" title="Xóa đáp án"><i class="bi bi-x-lg"></i></button>
+                </div>
+                <div class="choice-row d-flex align-items-center gap-2 mb-2">
+                  <input type="radio" name="correct_choice" value="2" class="form-check-input flex-shrink-0 mt-0" title="Đáp án đúng">
+                  <input type="text" name="choice_content" class="form-control" placeholder="Đáp án C" required>
+                  <button type="button" class="btn btn-outline-danger btn-sm remove-choice flex-shrink-0" title="Xóa đáp án"><i class="bi bi-x-lg"></i></button>
+                </div>
+                <div class="choice-row d-flex align-items-center gap-2 mb-2">
+                  <input type="radio" name="correct_choice" value="3" class="form-check-input flex-shrink-0 mt-0" title="Đáp án đúng">
+                  <input type="text" name="choice_content" class="form-control" placeholder="Đáp án D" required>
+                  <button type="button" class="btn btn-outline-danger btn-sm remove-choice flex-shrink-0" title="Xóa đáp án"><i class="bi bi-x-lg"></i></button>
+                </div>
+              {% endif %}
+            </div>
+            <button type="button" id="addChoice" class="btn btn-outline-secondary btn-sm mt-2">
+              <i class="bi bi-plus-circle me-1"></i>Thêm đáp án
+            </button>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary flex-fill">
+              <i class="bi bi-check-lg me-1"></i>{{ 'Cập nhật' if question else 'Thêm mới' }}
+            </button>
+            <a href="{{ url_for('questions') }}" class="btn btn-outline-secondary">Hủy</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById('addChoice').addEventListener('click', function () {
+  const container = document.getElementById('choicesContainer');
+  const count = container.querySelectorAll('.choice-row').length;
+  const row = document.createElement('div');
+  row.className = 'choice-row d-flex align-items-center gap-2 mb-2';
+  row.innerHTML = `
+    <input type="radio" name="correct_choice" value="${count}" class="form-check-input flex-shrink-0 mt-0" title="Đáp án đúng">
+    <input type="text" name="choice_content" class="form-control" placeholder="Đáp án ${String.fromCharCode(65 + count)}" required>
+    <button type="button" class="btn btn-outline-danger btn-sm remove-choice flex-shrink-0" title="Xóa đáp án">
+      <i class="bi bi-x-lg"></i>
+    </button>`;
+  container.appendChild(row);
+  updateRadioValues();
+});
+
+document.getElementById('choicesContainer').addEventListener('click', function (e) {
+  const btn = e.target.closest('.remove-choice');
+  if (btn) {
+    const rows = document.querySelectorAll('.choice-row');
+    if (rows.length <= 2) {
+      const existing = document.getElementById('choiceAlert');
+      if (!existing) {
+        const alert = document.createElement('div');
+        alert.id = 'choiceAlert';
+        alert.className = 'alert alert-warning alert-dismissible fade show mt-2';
+        alert.innerHTML = 'Câu hỏi cần ít nhất 2 đáp án. <button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+        document.getElementById('choicesContainer').after(alert);
+      }
+      return;
+    }
+    btn.closest('.choice-row').remove();
+    updateRadioValues();
+  }
+});
+
+function updateRadioValues() {
+  document.querySelectorAll('.choice-row').forEach((row, i) => {
+    row.querySelector('input[type=radio]').value = i;
+  });
+}
+</script>
+{% endblock %}

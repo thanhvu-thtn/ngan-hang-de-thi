@@ -1,0 +1,49 @@
+/* ── General ────────────────────────────────────────────────── */
+body {
+  background-color: #f8f9fa;
+}
+
+/* ── Hero banner ────────────────────────────────────────────── */
+.hero-banner {
+  background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+}
+
+/* ── Stat icon ──────────────────────────────────────────────── */
+.stat-icon {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Navbar active link ─────────────────────────────────────── */
+.navbar-nav .nav-link.active {
+  font-weight: 600;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.8);
+}
+
+/* ── Choice option hover (take exam) ───────────────────────── */
+.choice-option {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.choice-option:hover {
+  background-color: #e7f1ff;
+}
+.choice-option.selected {
+  background-color: #cfe2ff;
+  border: 1px solid #0d6efd;
+}
+
+/* ── Question selector (exam form) ─────────────────────────── */
+.question-selector .form-check {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.question-selector .form-check:hover {
+  background-color: #f0f4ff;
+}
+.question-selector .form-check-input:checked ~ .form-check-label {
+  color: #0d6efd;
+}

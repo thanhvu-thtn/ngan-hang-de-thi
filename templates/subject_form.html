@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Sửa môn học' if subject else 'Thêm môn học' }} - Ngân Hàng Đề Thi{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card shadow-sm border-0">
+      <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">
+          <i class="bi bi-book me-2"></i>
+          {{ 'Sửa môn học' if subject else 'Thêm môn học mới' }}
+        </h5>
+      </div>
+      <div class="card-body p-4">
+        <form method="post">
+          <div class="mb-3">
+            <label for="name" class="form-label fw-semibold">Tên môn học <span class="text-danger">*</span></label>
+            <input type="text" id="name" name="name" class="form-control"
+                   value="{{ subject.name if subject else '' }}" required placeholder="Ví dụ: Toán, Lý, Hóa...">
+          </div>
+          <div class="mb-4">
+            <label for="description" class="form-label fw-semibold">Mô tả</label>
+            <textarea id="description" name="description" class="form-control" rows="3"
+                      placeholder="Mô tả ngắn về môn học...">{{ subject.description if subject else '' }}</textarea>
+          </div>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary flex-fill">
+              <i class="bi bi-check-lg me-1"></i>{{ 'Cập nhật' if subject else 'Thêm mới' }}
+            </button>
+            <a href="{{ url_for('subjects') }}" class="btn btn-outline-secondary">Hủy</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
