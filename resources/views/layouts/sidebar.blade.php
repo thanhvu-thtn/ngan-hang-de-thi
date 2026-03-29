@@ -6,8 +6,8 @@
             <ul class="space-y-1">
                 <li><a href="#" class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i class="fa-solid fa-users w-5 text-center mr-2 text-slate-400"></i> Quản lý Users</a></li>
                 <li><a href="#" class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i class="fa-solid fa-shield-halved w-5 text-center mr-2 text-slate-400"></i> Phân quyền</a></li>
-                <li><a href="#" class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i class="fa-solid fa-book w-5 text-center mr-2 text-slate-400"></i> Quản lý Môn học</a></li>
-                <li><a href="#" class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i class="fa-solid fa-tags w-5 text-center mr-2 text-slate-400"></i> Loại chuyên đề</a></li>
+                <li><a href="{{ route('subjects.index') }}" class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i class="fa-solid fa-book w-5 text-center mr-2 text-slate-400"></i> Quản lý Môn học</a></li>
+                <li><a href="{{ route('topic-types.index') }}" class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i class="fa-solid fa-tags w-5 text-center mr-2 text-slate-400"></i> Loại chuyên đề</a></li>
             </ul>
         </div>
 
