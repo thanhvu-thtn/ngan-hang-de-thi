@@ -1,62 +1,36 @@
-<<<<<<< HEAD
-# ngan-hang-de-thi
-=======
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+1. Khởi tạo Database (Migrations):
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Đã thiết kế xong cấu trúc và mối quan hệ cho 5 bảng cốt lõi của hệ thống giáo dục: subjects (Môn học), topic_types (Loại chuyên đề), topics (Chuyên đề), contents (Nội dung), và objectives (Yêu cầu cần đạt).
 
-## About Laravel
+2. Module Quản lý Môn học (subjects):
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Xây dựng thành công toàn bộ luồng CRUD (Thêm, Xem, Sửa, Xóa).
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+Giao diện được thiết kế hiện đại, responsive bằng Tailwind CSS kết hợp icon FontAwesome.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Fix thành công lỗi giao diện (nút Lưu bị tàng hình do Tailwind JIT chưa nạp kịp class màu).
 
-## Learning Laravel
+Bảo mật dữ liệu: Thêm 2 lớp bảo vệ (Frontend alert + Backend logic) để ngăn chặn việc xóa Môn học nếu bên trong nó đang chứa các Chuyên đề, giúp tránh lỗi cơ sở dữ liệu và dữ liệu rác.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+3. Module Quản lý Loại chuyên đề (topic_types):
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+Hoàn thiện luồng CRUD bao gồm cả 2 trường thông tin là Tên loại (name) và Mô tả (description) bám sát chuẩn Database.
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+Sửa thành công lỗi Route (Route not defined) do sai lệch định dạng tên (_ và -) giữa định nghĩa trong web.php và lúc gọi hàm trong View.
 
-## Agentic Development
+Bảo mật dữ liệu: Áp dụng thành công logic ngăn chặn xóa Loại chuyên đề nếu đang có Chuyên đề (topic) nào đó sử dụng phân loại này.
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
-```
-
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
-
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
->>>>>>> 642c486 (Khởi tạo dự án Ngân hàng đề thi)
+4. Ghi chú
+    - Đã cài đặt gói Spatie Laravel Permission của laravel về phân quyền
+    - Kéo code của Katex, mathjax, tinyMCE về máy.
+    - editor.js: Khởi tạo tinyMCE và dùng Katex hiển thị nội dung trong preview.
+    ## [Cập nhật] - Ngày 29/03/2026
+### ✨ Tính năng mới (Features)
+- **Hệ thống phân quyền (Spatie):** - Tích hợp package `spatie/laravel-permission`.
+  - Thiết lập Seeder tạo sẵn 5 Vai trò cốt lõi theo đúng đặc tả: Admin, Tổ trưởng, Biên soạn, Biên tập, Ra đề.
+  - Phân chia các quyền tương ứng: truy cập hệ thống, truy cập bộ môn, thêm/sửa câu hỏi, thêm đề thi.
+- **Quản lý Người dùng (Users CRUD):**
+  - Thêm cột `subject_id` vào bảng `users` để liên kết giáo viên/tổ trưởng với môn học.
+  - Xây dựng hoàn chỉnh Controller và các màn hình giao diện (View: `index`, `create`, `edit`) cho bảng Users.
+  - Tích hợp logic tự động gán Vai trò (Role) và Môn học (Subject) ngay khi tạo hoặc cập nhật tài khoản.
+  - Thêm tài khoản Admin mặc định (`admin@gmail.com`).

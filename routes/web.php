@@ -3,6 +3,8 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SubjectController;
 use App\Http\Controllers\TopicTypeController;
+use App\Http\Controllers\TopicController;
+use App\Http\Controllers\UserController;
 
 // Thêm dòng này vào nhóm route đã đăng nhập (nếu bạn có auth) hoặc cứ để tạm ở ngoài để test:
 Route::resource('subjects', SubjectController::class);
@@ -35,4 +37,26 @@ Route::prefix('topic_types')->group(function () {
     Route::get('/{topic_type}/edit', [TopicTypeController::class, 'edit'])->name('topic-types.edit');
     Route::put('/{topic_type}', [TopicTypeController::class, 'update'])->name('topic-types.update');
     Route::delete('/{topic_type}', [TopicTypeController::class, 'destroy'])->name('topic-types.destroy');
+});
+
+//Nhóm các route xử lý Topics
+Route::prefix('topics')->group(function () {
+    Route::get('/', [TopicController::class, 'index'])->name('topics.index');
+    Route::get('/create', [TopicController::class, 'create'])->name('topics.create');
+    Route::post('/', [TopicController::class, 'store'])->name('topics.store');
+    Route::get('/{topic}', [TopicController::class, 'show'])->name('topics.show');
+    Route::get('/{topic}/edit', [TopicController::class, 'edit'])->name('topics.edit');
+    Route::put('/{topic}', [TopicController::class, 'update'])->name('topics.update');
+    Route::delete('/{topic}', [TopicController::class, 'destroy'])->name('topics.destroy');
+});
+
+//Nhóm các route xử lý Users
+Route::prefix('users')->group(function () {
+    Route::get('/', [UserController::class, 'index'])->name('users.index');
+    Route::get('/create', [UserController::class, 'create'])->name('users.create');
+    Route::post('/', [UserController::class, 'store'])->name('users.store');
+    Route::get('/{user}', [UserController::class, 'show'])->name('users.show');
+    Route::get('/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
+    Route::put('/{user}', [UserController::class, 'update'])->name('users.update');
+    Route::delete('/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 });

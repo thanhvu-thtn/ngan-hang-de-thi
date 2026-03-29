@@ -4,7 +4,7 @@
         <div id="menu-he-thong" class="sidebar-group block">
             <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Hệ thống</h3>
             <ul class="space-y-1">
-                <li><a href="#" class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i class="fa-solid fa-users w-5 text-center mr-2 text-slate-400"></i> Quản lý Users</a></li>
+                <li><a href="{{ route('users.index') }}" class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i class="fa-solid fa-users w-5 text-center mr-2 text-slate-400"></i> Quản lý Users</a></li>
                 <li><a href="#" class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i class="fa-solid fa-shield-halved w-5 text-center mr-2 text-slate-400"></i> Phân quyền</a></li>
                 <li><a href="{{ route('subjects.index') }}" class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i class="fa-solid fa-book w-5 text-center mr-2 text-slate-400"></i> Quản lý Môn học</a></li>
                 <li><a href="{{ route('topic-types.index') }}" class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i class="fa-solid fa-tags w-5 text-center mr-2 text-slate-400"></i> Loại chuyên đề</a></li>
@@ -14,7 +14,7 @@
         <div id="menu-to-truong" class="sidebar-group hidden">
             <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Tổ trưởng</h3>
             <ul class="space-y-1">
-                <li><a href="#" class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i class="fa-solid fa-list-check w-5 text-center mr-2 text-slate-400"></i> Yêu cầu cần đạt</a></li>
+                <li><a href="{{ route('topics.index') }}" class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i class="fa-solid fa-list-check w-5 text-center mr-2 text-slate-400"></i> Quản lí chuyên đề</a></li>
                 <li><a href="#" class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i class="fa-solid fa-pen-nib w-5 text-center mr-2 text-slate-400"></i> Phân công câu hỏi</a></li>
                 <li><a href="#" class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i class="fa-solid fa-file-circle-plus w-5 text-center mr-2 text-slate-400"></i> Phân công ra đề</a></li>
                 <li><a href="#" class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i class="fa-solid fa-marker w-5 text-center mr-2 text-slate-400"></i> Phân công chấm bài</a></li>
