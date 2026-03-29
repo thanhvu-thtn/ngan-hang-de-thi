@@ -34,3 +34,18 @@ Bảo mật dữ liệu: Áp dụng thành công logic ngăn chặn xóa Loại 
   - Xây dựng hoàn chỉnh Controller và các màn hình giao diện (View: `index`, `create`, `edit`) cho bảng Users.
   - Tích hợp logic tự động gán Vai trò (Role) và Môn học (Subject) ngay khi tạo hoặc cập nhật tài khoản.
   - Thêm tài khoản Admin mặc định (`admin@gmail.com`).
+
+  Định hướng cho chức năng "Phân quyền" sau này
+Với thiết lập trên, quy trình của hệ thống sẽ diễn ra rất tự nhiên như sau:
+
+Admin tạo tài khoản Nguyễn Văn A, chọn Role là Giáo viên, Môn Vật Lí.
+
+Tổ trưởng môn Vật lí đăng nhập, vào menu "Phân quyền" (chức năng này ta sẽ làm riêng biệt như bạn nói).
+
+Tổ trưởng chọn Giáo viên Nguyễn Văn A và tick chọn các ô: [x] Thêm mới câu hỏi, [x] Sửa câu hỏi.
+
+Dưới logic code (sau này ta viết), nó sẽ chạy lệnh:
+$userA->givePermissionTo(['them-moi-cau-hoi', 'sua-cau-hoi']);
+
+Hết học kỳ, Tổ trưởng bỏ tick chọn, hệ thống chạy:
+$userA->revokePermissionTo(['them-moi-cau-hoi', 'sua-cau-hoi']);

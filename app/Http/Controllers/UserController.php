@@ -10,6 +10,8 @@ use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
+    
+
     public function index(Request $request)
     {
         // Load danh sách user kèm theo môn học và vai trò (roles)

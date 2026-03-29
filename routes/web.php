@@ -5,58 +5,45 @@ use App\Http\Controllers\SubjectController;
 use App\Http\Controllers\TopicTypeController;
 use App\Http\Controllers\TopicController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DashboardController;
 
-// Thêm dòng này vào nhóm route đã đăng nhập (nếu bạn có auth) hoặc cứ để tạm ở ngoài để test:
-Route::resource('subjects', SubjectController::class);
-
+// 1. TRANG CHỦ & LOGIN
 Route::get('/', function () {
-    return view('welcome');
+    return auth()->check() ? redirect()->route('dashboard') : redirect()->route('login');
 });
 
-Route::get('/test', function () {
-    return view('test');
-});
+Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
+Route::post('/login', [AuthController::class, 'login']);
 
-//Nhóm các route xử lý Subjects
-Route::prefix('subjects')->group(function () {
-    Route::get('/', [SubjectController::class, 'index'])->name('subjects.index');
-    Route::get('/create', [SubjectController::class, 'create'])->name('subjects.create');
-    Route::post('/', [SubjectController::class, 'store'])->name('subjects.store');
-    Route::get('/{subject}', [SubjectController::class, 'show'])->name('subjects.show');
-    Route::get('/{subject}/edit', [SubjectController::class, 'edit'])->name('subjects.edit');
-    Route::put('/{subject}', [SubjectController::class, 'update'])->name('subjects.update');
-    Route::delete('/{subject}', [SubjectController::class, 'destroy'])->name('subjects.destroy');
-});
+// 2. NHÓM YÊU CẦU ĐĂNG NHẬP (Chung cho tất cả mọi người đã login)
+Route::middleware('auth')->group(function () {
+    
+    // Trang chào mừng sau login
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    
+    // Đăng xuất
+    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-//Nhóm các route xử lý Topic_types
-Route::prefix('topic_types')->group(function () {
-    Route::get('/', [TopicTypeController::class, 'index'])->name('topic-types.index');
-    Route::get('/create', [TopicTypeController::class, 'create'])->name('topic-types.create');
-    Route::post('/', [TopicTypeController::class, 'store'])->name('topic-types.store');
-    Route::get('/{topic_type}', [TopicTypeController::class, 'show'])->name('topic-types.show');
-    Route::get('/{topic_type}/edit', [TopicTypeController::class, 'edit'])->name('topic-types.edit');
-    Route::put('/{topic_type}', [TopicTypeController::class, 'update'])->name('topic-types.update');
-    Route::delete('/{topic_type}', [TopicTypeController::class, 'destroy'])->name('topic-types.destroy');
-});
+    // --- NHÓM QUẢN TRỊ VIÊN (Chỉ Admin mới được vào) ---
+    Route::middleware('role:Admin')->group(function () {
+        // Quản lý Người dùng
+        Route::resource('users', UserController::class);
 
-//Nhóm các route xử lý Topics
-Route::prefix('topics')->group(function () {
-    Route::get('/', [TopicController::class, 'index'])->name('topics.index');
-    Route::get('/create', [TopicController::class, 'create'])->name('topics.create');
-    Route::post('/', [TopicController::class, 'store'])->name('topics.store');
-    Route::get('/{topic}', [TopicController::class, 'show'])->name('topics.show');
-    Route::get('/{topic}/edit', [TopicController::class, 'edit'])->name('topics.edit');
-    Route::put('/{topic}', [TopicController::class, 'update'])->name('topics.update');
-    Route::delete('/{topic}', [TopicController::class, 'destroy'])->name('topics.destroy');
-});
+        // Quản lý Môn học
+        Route::resource('subjects', SubjectController::class);
 
-//Nhóm các route xử lý Users
-Route::prefix('users')->group(function () {
-    Route::get('/', [UserController::class, 'index'])->name('users.index');
-    Route::get('/create', [UserController::class, 'create'])->name('users.create');
-    Route::post('/', [UserController::class, 'store'])->name('users.store');
-    Route::get('/{user}', [UserController::class, 'show'])->name('users.show');
-    Route::get('/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
-    Route::put('/{user}', [UserController::class, 'update'])->name('users.update');
-    Route::delete('/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+        // Quản lý Loại chuyên đề
+        Route::resource('topic-types', TopicTypeController::class);
+    });
+
+    // --- NHÓM TỔ TRƯỞNG & ADMIN (Mở rộng cho mục tiêu của bạn) ---
+    Route::middleware('role:Admin|Tổ trưởng')->group(function () {
+        // Quản lý Chuyên đề
+        Route::resource('topics', TopicController::class);
+        
+        // Đây sẽ là nơi chúng ta thêm route Phân quyền Giáo viên ở bước sau
+        // Route::get('/assignment', [AssignmentController::class, 'index'])->name('assignment.index');
+    });
+
 });
