@@ -1,30 +1,41 @@
 import './bootstrap';
-import './menu';
 
-// Import KaTeX và Auto-render từ thư mục node_modules
-import katex from 'katex';
-import renderMathInElement from 'katex/dist/contrib/auto-render.mjs';
-
-// Import CSS của KaTeX
+// 1. Nhập KaTeX (để hiển thị công thức toán học)
 import 'katex/dist/katex.min.css';
+import renderMathInElement from 'katex/dist/contrib/auto-render.js';
 
-// Gắn vào window để các file Blade (.blade.php) có thể gọi được trực tiếp
-window.katex = katex;
+// Gán vào window để file editor.js có thể gọi được hàm này
 window.renderMathInElement = renderMathInElement;
 
-// Import cấu hình TinyMCE & Preview của chúng ta
-import './editor';
+// 2. Nhập TinyMCE (để soạn thảo nội dung)
+import tinymce from 'tinymce';
+import 'tinymce/themes/silver';
+import 'tinymce/icons/default';
+import 'tinymce/models/dom';
 
-// Tự động render toàn bộ trang khi load xong (áp dụng cho các trang đọc câu hỏi)
+// Các plugin cần thiết cho trình soạn thảo
+import 'tinymce/plugins/lists';
+import 'tinymce/plugins/link';
+import 'tinymce/plugins/code';
+import 'tinymce/plugins/table';
+
+// Gán vào window để editor.js nhận diện được đối tượng tinymce
+window.tinymce = tinymce;
+
+// 3. Tự động render KaTeX cho toàn trang khi tải xong
 document.addEventListener("DOMContentLoaded", function() {
-    renderMathInElement(document.body, {
-        delimiters: [
-            {left: '$$', right: '$$', display: true},
-            {left: '$', right: '$', display: false},
-            {left: '\\(', right: '\\)', display: false},
-            {left: '\\[', right: '\\]', display: true}
-        ],
-        output: 'mathml', 
-        throwOnError: false
-    });
+    const elements = document.querySelectorAll('.format-katex');
+    if (elements.length > 0) {
+        elements.forEach(el => {
+            window.renderMathInElement(el, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false},
+                    {left: '\\(', right: '\\)', display: false},
+                    {left: '\\[', right: '\\]', display: true}
+                ],
+                throwOnError: false
+            });
+        });
+    }
 });

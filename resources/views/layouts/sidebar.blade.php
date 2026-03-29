@@ -21,7 +21,7 @@
                 <li><a href="{{ route('topics.index') }}" class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i class="fa-solid fa-list-check w-5 text-center mr-2 text-slate-400"></i> Quản lí chuyên đề</a></li>
                 {{-- Đây là mục quan quan trọng để phân quyền cho GV --}}
                 {{-- <li><a href="{{ route('assignment.index') }}" class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i class="fa-solid fa-shield-halved w-5 text-center mr-2 text-slate-400"></i> Phân công quyền</a></li> --}}
-                <li><a href="#" class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i class="fa-solid fa-shield-halved w-5 text-center mr-2 text-slate-400"></i> Phân công quyền</a></li>
+                <li><a href="{{ route('assignments.index') }}" class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i class="fa-solid fa-shield-halved w-5 text-center mr-2 text-slate-400"></i> Phân công - cấp quyền</a></li>
             </ul>
         </div>
         @endhasanyrole

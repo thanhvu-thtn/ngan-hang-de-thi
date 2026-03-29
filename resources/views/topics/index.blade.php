@@ -124,8 +124,15 @@
                             <td class="px-4 py-4 text-center font-bold text-blue-600">{{ $topic->grade }}</td>
 
                             <td class="px-4 py-4 font-bold text-slate-800">
-                                <span class="text-slate-400 font-normal mr-1">[{{ $topic->order }}]</span>
-                                {{ $topic->name }}
+                                <a href="{{ route('contents.index', [
+                                    'grade' => $topic->grade,
+                                    'topic_type_id' => $topic->topic_type_id,
+                                    'topic_id' => $topic->id,
+                                ]) }}"
+                                    class="hover:text-indigo-600 hover:underline transition duration-150 block">
+                                    <span class="text-slate-400 font-normal mr-1">[{{ $topic->order }}]</span>
+                                    {{ $topic->name }}
+                                </a>
                             </td>
 
                             <td class="px-4 py-4">

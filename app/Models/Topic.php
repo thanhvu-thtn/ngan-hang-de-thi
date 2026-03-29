@@ -31,4 +31,9 @@ class Topic extends Model
     {
         return $this->belongsTo(TopicType::class, 'topic_type_id');
     }
+
+    public function contents()
+    {
+        return $this->hasMany(Content::class);
+    }
 }

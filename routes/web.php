@@ -7,6 +7,8 @@ use App\Http\Controllers\TopicController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\AssignmentController;
+use App\Http\Controllers\ObjectiveController;
 
 // 1. TRANG CHỦ & LOGIN
 Route::get('/', function () {
@@ -41,9 +43,21 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:Admin|Tổ trưởng')->group(function () {
         // Quản lý Chuyên đề
         Route::resource('topics', TopicController::class);
+        // Quản lý Phân quyền Giáo viên (Dành cho Tổ trưởng)
+        Route::get('/assignments', [AssignmentController::class, 'index'])->name('assignments.index');
+        Route::post('/assignments', [AssignmentController::class, 'update'])->name('assignments.update');
+        Route::middleware('role:Admin|Tổ trưởng')->group(function () {
+        // Quản lý Chuyên đề
+        Route::resource('topics', TopicController::class);
         
-        // Đây sẽ là nơi chúng ta thêm route Phân quyền Giáo viên ở bước sau
-        // Route::get('/assignment', [AssignmentController::class, 'index'])->name('assignment.index');
+        // Quản lý Nội dung chuyên đề (MỚI THÊM)
+        Route::resource('contents', App\Http\Controllers\ContentController::class);
+        Route::resource('objectives', ObjectiveController::class);
+        
+        // Quản lý Phân quyền Giáo viên (Dành cho Tổ trưởng)
+        Route::get('/assignments', [AssignmentController::class, 'index'])->name('assignments.index');
+        Route::post('/assignments', [AssignmentController::class, 'update'])->name('assignments.update');
+    });
     });
 
 });
