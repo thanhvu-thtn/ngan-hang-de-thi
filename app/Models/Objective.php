@@ -22,4 +22,10 @@ class Objective extends Model
     {
         return $this->belongsTo(Content::class);
     }
+
+    // Bổ sung vào trong class Objective
+    public function questions()
+    {
+        return $this->belongsToMany(Question::class, 'objective_question');
+    }
 }
