@@ -102,8 +102,12 @@ class TopicController extends Controller
 
         Topic::create($validated);
 
-        return redirect()->route('topics.index')
-            ->with('success', 'Đã thêm chuyên đề thành công!');
+        // Ở cuối hàm store() và update()
+        if ($request->has('back_url')) {
+            return redirect(urldecode($request->back_url))->with('success', 'Đã lưu thành công!');
+        }
+
+        return redirect()->route('topics.index')->with('success', 'Đã lưu thành công!');
     }
 
     public function edit(Topic $topic)
@@ -155,8 +159,12 @@ class TopicController extends Controller
 
         $topic->update($validated);
 
-        return redirect()->route('topics.index')
-            ->with('success', 'Cập nhật chuyên đề thành công!');
+        // Ở cuối hàm store() và update()
+        if ($request->has('back_url')) {
+            return redirect(urldecode($request->back_url))->with('success', 'Đã lưu thành công!');
+        }
+
+        return redirect()->route('topics.index')->with('success', 'Đã lưu thành công!');
     }
 
     public function destroy(Topic $topic)

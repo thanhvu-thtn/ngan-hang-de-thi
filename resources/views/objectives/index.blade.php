@@ -2,10 +2,15 @@
 
 @section('content')
     <div class="container mx-auto px-4 py-6 max-w-7xl">
-        
+
         <div class="flex justify-between items-center mb-6">
             <div class="flex items-center space-x-4">
-                <a href="{{ route('contents.index', ['grade' => $content->topic->grade, 'topic_id' => $content->topic_id]) }}"
+                {{-- <a href="{{ route('contents.index', ['grade' => $content->topic->grade, 'topic_id' => $content->topic_id]) }}"
+                    class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 py-2 px-3 rounded-lg shadow-sm transition duration-150"
+                    title="Quay lại danh sách Nội dung">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </a> --}}
+                <a href="{{ request('back_url') ? urldecode(request('back_url')) : route('contents.index', ['grade' => $content->topic->grade, 'topic_id' => $content->topic_id]) }}"
                     class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 py-2 px-3 rounded-lg shadow-sm transition duration-150"
                     title="Quay lại danh sách Nội dung">
                     <i class="fa-solid fa-arrow-left"></i>
@@ -65,12 +70,12 @@
                             </td>
                             <td class="py-4 px-6 text-center text-sm font-medium">
                                 <div class="flex item-center justify-center space-x-3">
-                                    <a href="{{ route('objectives.edit', $objective->id) }}" class="text-amber-500 hover:text-amber-700" title="Sửa">
+                                    <a href="{{ route('objectives.edit', $objective->id) }}"
+                                        class="text-amber-500 hover:text-amber-700" title="Sửa">
                                         <i class="fa-solid fa-pen-to-square"></i>
                                     </a>
                                     <form action="{{ route('objectives.destroy', $objective->id) }}" method="POST"
-                                        onsubmit="return confirm('Bạn có chắc chắn muốn xóa yêu cầu này?');"
-                                        class="inline">
+                                        onsubmit="return confirm('Bạn có chắc chắn muốn xóa yêu cầu này?');" class="inline">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="text-red-500 hover:text-red-700" title="Xóa">
@@ -91,5 +96,5 @@
                 </tbody>
             </table>
         </div>
-        </div>
+    </div>
 @endsection

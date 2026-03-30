@@ -5,7 +5,7 @@
 @section('content')
 <div class="max-w-4xl mx-auto">
     <div class="flex items-center gap-4 mb-6">
-        <a href="{{ route('topics.index') }}" class="w-10 h-10 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-50 hover:text-blue-600 transition shadow-sm">
+        <a href="{{ request('back_url') ? urldecode(request('back_url')) : route('topics.index') }}" class="w-10 h-10 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-50 hover:text-blue-600 transition shadow-sm">
             <i class="fa-solid fa-arrow-left"></i>
         </a>
         <div>
@@ -17,6 +17,10 @@
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <form action="{{ route('topics.store') }}" method="POST" class="p-6">
             @csrf
+            
+            @if(request('back_url'))
+                <input type="hidden" name="back_url" value="{{ request('back_url') }}">
+            @endif
 
             <div class="mb-6">
                 <label for="name" class="block text-sm font-semibold text-slate-700 mb-2">
@@ -39,7 +43,7 @@
                         class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all @error('subject_id') border-rose-500 @enderror">
                         <option value="">-- Chọn môn học --</option>
                         @foreach($subjects as $subject)
-                            <option value="{{ $subject->id }}" {{ old('subject_id') == $subject->id ? 'selected' : '' }}>
+                            <option value="{{ $subject->id }}" {{ old('subject_id', request('subject_id')) == $subject->id ? 'selected' : '' }}>
                                 {{ $subject->name }}
                             </option>
                         @endforeach
@@ -57,7 +61,7 @@
                         class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all @error('topic_type_id') border-rose-500 @enderror">
                         <option value="">-- Chọn loại chuyên đề --</option>
                         @foreach($topicTypes as $type)
-                            <option value="{{ $type->id }}" {{ old('topic_type_id') == $type->id ? 'selected' : '' }}>
+                            <option value="{{ $type->id }}" {{ old('topic_type_id', request('topic_type_id')) == $type->id ? 'selected' : '' }}>
                                 {{ $type->name }}
                             </option>
                         @endforeach
@@ -76,9 +80,9 @@
                     <select name="grade" id="grade" required
                         class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all">
                         <option value="">-- Chọn khối --</option>
-                        <option value="10" {{ old('grade') == '10' ? 'selected' : '' }}>Khối 10</option>
-                        <option value="11" {{ old('grade') == '11' ? 'selected' : '' }}>Khối 11</option>
-                        <option value="12" {{ old('grade') == '12' ? 'selected' : '' }}>Khối 12</option>
+                        <option value="10" {{ old('grade', request('grade')) == '10' ? 'selected' : '' }}>Khối 10</option>
+                        <option value="11" {{ old('grade', request('grade')) == '11' ? 'selected' : '' }}>Khối 11</option>
+                        <option value="12" {{ old('grade', request('grade')) == '12' ? 'selected' : '' }}>Khối 12</option>
                     </select>
                     @error('grade')
                         <p class="mt-1.5 text-sm text-rose-500">{{ $message }}</p>
@@ -105,7 +109,7 @@
             </div>
 
             <div class="flex items-center justify-end gap-3 pt-6 border-t border-slate-100">
-                <a href="{{ route('topics.index') }}" class="px-5 py-2.5 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition">
+                <a href="{{ request('back_url') ? urldecode(request('back_url')) : route('topics.index') }}" class="px-5 py-2.5 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition">
                     Hủy bỏ
                 </a>
                 <button type="submit" class="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm flex items-center gap-2 transition">

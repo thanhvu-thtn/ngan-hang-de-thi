@@ -89,8 +89,11 @@ class ContentController extends Controller
 
         Content::create($validated);
 
-        return redirect()->route('contents.index', $request->query())
-            ->with('success', 'Thêm nội dung thành công!');
+        if ($request->has('back_url')) {
+            return redirect(urldecode($request->back_url))->with('success', 'Thêm nội dung thành công!');
+        }
+
+        return redirect()->route('contents.index')->with('success', 'Thêm nội dung thành công!');
     }
 
     public function edit(Content $content)
@@ -134,8 +137,11 @@ class ContentController extends Controller
         $content->update($validated);
 
         // ĐIỂM ĂN TIỀN: Lấy toàn bộ tham số trên URL (?grade=10&page=2...) để gán ngược lại vào lệnh redirect
-        return redirect()->route('contents.index', $request->query())
-            ->with('success', 'Cập nhật nội dung thành công!');
+        if ($request->has('back_url')) {
+            return redirect(urldecode($request->back_url))->with('success', 'Cập nhật nội dung thành công!');
+        }
+
+        return redirect()->route('contents.index')->with('success', 'Cập nhật nội dung thành công!');
     }
 
     public function destroy(Request $request, Content $content)

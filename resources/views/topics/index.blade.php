@@ -10,8 +10,8 @@
                     Chuyên đề</h2>
                 <p class="text-slate-500 text-sm mt-1">Danh sách chuyên đề theo môn học và khối lớp</p>
             </div>
-            <a href="{{ route('topics.create') }}"
-                class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md shadow-sm transition flex items-center gap-2">
+            <a href="{{ route('topics.create', array_merge(request()->only(['subject_id', 'topic_type_id', 'grade']), ['back_url' => urlencode(request()->fullUrl())])) }}"
+                class="px-4 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm flex items-center gap-2 transition">
                 <i class="fa-solid fa-plus"></i> Thêm chuyên đề
             </a>
         </div>
@@ -128,6 +128,7 @@
                                     'grade' => $topic->grade,
                                     'topic_type_id' => $topic->topic_type_id,
                                     'topic_id' => $topic->id,
+                                    'back_url' => urlencode(request()->fullUrl()),
                                 ]) }}"
                                     class="hover:text-indigo-600 hover:underline transition duration-150 block">
                                     <span class="text-slate-400 font-normal mr-1">[{{ $topic->order }}]</span>
@@ -146,7 +147,7 @@
                             <td class="px-4 py-4 text-center font-medium">{{ $topic->total_periods }}</td>
                             <td class="px-4 py-4 text-center">
                                 <div class="flex items-center justify-center gap-2">
-                                    <a href="{{ route('topics.edit', $topic->id) }}"
+                                    <a href="{{ route('topics.edit', ['topic' => $topic->id, 'back_url' => urlencode(request()->fullUrl())]) }}"
                                         class="text-amber-500 hover:text-amber-600 bg-amber-50 hover:bg-amber-100 p-1.5 rounded transition"
                                         title="Sửa">
                                         <i class="fa-solid fa-pen-to-square"></i>

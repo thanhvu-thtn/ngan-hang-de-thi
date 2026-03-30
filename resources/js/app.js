@@ -1,10 +1,12 @@
 import './bootstrap';
 
-// 1. Nhập KaTeX (để hiển thị công thức toán học)
+// 1. Nhập KaTeX (Dùng CHUẨN file .mjs, tuyệt đối không gọi .min.js)
 import 'katex/dist/katex.min.css';
-import renderMathInElement from 'katex/dist/contrib/auto-render.js';
+import katex from 'katex/dist/katex.mjs';
+import renderMathInElement from 'katex/dist/contrib/auto-render.mjs'; // Đổi luôn đuôi này thành .mjs
 
 // Gán vào window để file editor.js có thể gọi được hàm này
+window.katex = katex;
 window.renderMathInElement = renderMathInElement;
 
 // 2. Nhập TinyMCE (để soạn thảo nội dung)

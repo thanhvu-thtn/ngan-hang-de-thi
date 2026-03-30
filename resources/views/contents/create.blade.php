@@ -4,14 +4,18 @@
 <div class="container mx-auto px-4 py-6 max-w-3xl">
     <div class="mb-6 flex items-center justify-between">
         <h2 class="text-2xl font-bold text-gray-800">Thêm Nội dung mới</h2>
-        <a href="{{ route('contents.index', request()->query()) }}" class="text-indigo-600 hover:text-indigo-800 font-medium">
+        <a href="{{ request('back_url') ? urldecode(request('back_url')) : route('contents.index') }}" class="text-indigo-600 hover:text-indigo-800 font-medium">
             <i class="fa-solid fa-arrow-left mr-1"></i> Quay lại
         </a>
     </div>
 
     <div class="bg-white rounded-lg shadow-md p-6 border border-gray-100">
-        <form action="{{ route('contents.store', request()->query()) }}" method="POST">
+        <form action="{{ route('contents.store') }}" method="POST">
             @csrf
+            
+            @if(request('back_url'))
+                <input type="hidden" name="back_url" value="{{ request('back_url') }}">
+            @endif
             
             <div class="mb-5">
                 <label class="block text-gray-700 text-sm font-bold mb-2">Chuyên đề <span class="text-red-500">*</span></label>

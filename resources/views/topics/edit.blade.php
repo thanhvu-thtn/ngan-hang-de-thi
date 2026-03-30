@@ -5,7 +5,7 @@
 @section('content')
 <div class="max-w-4xl mx-auto">
     <div class="flex items-center gap-4 mb-6">
-        <a href="{{ route('topics.index') }}" class="w-10 h-10 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-50 hover:text-blue-600 transition shadow-sm">
+        <a href="{{ request('back_url') ? urldecode(request('back_url')) : route('topics.index') }}" class="w-10 h-10 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-50 hover:text-blue-600 transition shadow-sm">
             <i class="fa-solid fa-arrow-left"></i>
         </a>
         <div>
@@ -18,6 +18,10 @@
         <form action="{{ route('topics.update', $topic->id) }}" method="POST" class="p-6">
             @csrf
             @method('PUT')
+
+            @if(request('back_url'))
+                <input type="hidden" name="back_url" value="{{ request('back_url') }}">
+            @endif
 
             <div class="mb-6">
                 <label for="name" class="block text-sm font-semibold text-slate-700 mb-2">
@@ -93,7 +97,7 @@
             </div>
 
             <div class="flex items-center justify-end gap-3 pt-6 border-t border-slate-100">
-                <a href="{{ route('topics.index') }}" class="px-5 py-2.5 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition">
+                <a href="{{ request('back_url') ? urldecode(request('back_url')) : route('topics.index') }}" class="px-5 py-2.5 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition">
                     Hủy bỏ
                 </a>
                 <button type="submit" class="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm flex items-center gap-2 transition">
