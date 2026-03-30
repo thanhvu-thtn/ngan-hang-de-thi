@@ -9,6 +9,8 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\ObjectiveController;
+use App\Http\Controllers\ContentController;
+use App\Http\Controllers\QuestionTypeController;
 
 // 1. TRANG CHỦ & LOGIN
 Route::get('/', function () {
@@ -37,6 +39,8 @@ Route::middleware('auth')->group(function () {
 
         // Quản lý Loại chuyên đề
         Route::resource('topic-types', TopicTypeController::class);
+        // Quản lý Loại câu hỏi
+        Route::resource('question-types', QuestionTypeController::class);
     });
 
     // --- NHÓM TỔ TRƯỞNG & ADMIN (Mở rộng cho mục tiêu của bạn) ---
@@ -51,7 +55,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('topics', TopicController::class);
         
         // Quản lý Nội dung chuyên đề (MỚI THÊM)
-        Route::resource('contents', App\Http\Controllers\ContentController::class);
+        Route::resource('contents', ContentController::class);
         Route::resource('objectives', ObjectiveController::class);
         
         // Quản lý Phân quyền Giáo viên (Dành cho Tổ trưởng)

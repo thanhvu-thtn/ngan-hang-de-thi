@@ -1,4 +1,8 @@
 import './bootstrap';
+// Khởi tạo Alpine.js
+import Alpine from 'alpinejs';
+window.Alpine = Alpine;
+Alpine.start();
 
 // 1. Nhập KaTeX (Dùng CHUẨN file .mjs, tuyệt đối không gọi .min.js)
 import 'katex/dist/katex.min.css';

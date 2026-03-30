@@ -9,7 +9,7 @@ class QuestionType extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'code'];
+    protected $fillable = ['name', 'code', 'expected_choices_count'];
 
     // Một loại câu hỏi có nhiều câu hỏi
     public function questions()
