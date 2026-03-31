@@ -1,7 +1,5 @@
 <aside class="w-64 bg-white border-r border-slate-200 shadow-sm overflow-y-auto relative z-10">
-    <div class="p-4">
-
-        {{-- NHÓM HỆ THỐNG: Chỉ dành cho Admin --}}
+    <div class="p-4 mb-24"> {{-- NHÓM HỆ THỐNG: Chỉ dành cho Admin --}}
         @hasrole('Admin')
             <div id="menu-he-thong" class="sidebar-group block">
                 <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Hệ thống</h3>
@@ -15,11 +13,17 @@
                     <li><a href="{{ route('topic-types.index') }}"
                             class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i
                                 class="fa-solid fa-tags w-5 text-center mr-2 text-slate-400"></i> Loại chuyên đề</a></li>
-                    {{-- ĐÂY LÀ PHẦN MỚI THÊM --}}
                     <li><a href="{{ route('question-types.index') }}"
                             class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i
                                 class="fa-solid fa-clipboard-question w-5 text-center mr-2 text-slate-400"></i> Loại câu
                             hỏi</a></li>
+                    <li><a href="{{ route('cognitive-levels.index') }}" 
+                            class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i 
+                                class="fa-solid fa-brain w-5 text-center mr-2 text-slate-400"></i> Mức độ nhận thức</a></li>
+                    {{-- ĐÂY LÀ PHẦN MỚI THÊM CHO QUESTION LAYOUTS --}}
+                    <li><a href="{{ route('question-layouts.index') }}" 
+                            class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i 
+                                class="fa-solid fa-border-all w-5 text-center mr-2 text-slate-400"></i> Cấu hình hiển thị</a></li>
                 </ul>
             </div>
         @endhasrole
@@ -33,8 +37,6 @@
                             class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i
                                 class="fa-solid fa-list-check w-5 text-center mr-2 text-slate-400"></i> Quản lí chuyên
                             đề</a></li>
-                    {{-- Đây là mục quan quan trọng để phân quyền cho GV --}}
-                    {{-- <li><a href="{{ route('assignment.index') }}" class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i class="fa-solid fa-shield-halved w-5 text-center mr-2 text-slate-400"></i> Phân công quyền</a></li> --}}
                     <li><a href="{{ route('assignments.index') }}"
                             class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i
                                 class="fa-solid fa-shield-halved w-5 text-center mr-2 text-slate-400"></i> Phân công - cấp
@@ -90,7 +92,7 @@
     </div>
 
     {{-- PHẦN USER INFO & LOGOUT (Giữ nguyên cấu trúc của bạn) --}}
-    <div class="absolute bottom-0 left-0 w-64 p-4 border-t border-slate-200 bg-white">
+    <div class="fixed bottom-0 left-0 w-64 p-4 border-t border-slate-200 bg-white">
         <div class="flex items-center gap-3 mb-4 px-2">
             <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
                 {{ substr(auth()->user()->name ?? 'U', 0, 1) }}

@@ -9,14 +9,15 @@ class Question extends Model
 {
     use HasFactory;
 
+    // Cập nhật lại mảng fillable theo cấu trúc mới
     protected $fillable = [
+        'name', 
         'question_type_id', 
         'cognitive_level_id', 
         'shared_context_id', 
+        'layout_id', 
         'stem', 
-        'difficulty_index', 
-        'layout_type', 
-        'layout_ratio'
+        'difficulty_index'
     ];
 
     // Thuộc về 1 Loại câu hỏi
@@ -35,6 +36,12 @@ class Question extends Model
     public function sharedContext()
     {
         return $this->belongsTo(SharedContext::class);
+    }
+
+    // Thuộc về 1 Cấu hình hiển thị - MỚI THÊM
+    public function layout()
+    {
+        return $this->belongsTo(QuestionLayout::class, 'layout_id');
     }
 
     // Có nhiều Lựa chọn/Đáp án
