@@ -19,17 +19,6 @@
         </a>
     </div>
 
-    @if (session('success'))
-        <div class="bg-emerald-50 border-l-4 border-emerald-500 text-emerald-700 p-4 rounded shadow-sm mb-6" role="alert">
-            <span class="font-medium">{{ session('success') }}</span>
-        </div>
-    @endif
-
-    @if (session('error'))
-        <div class="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded shadow-sm mb-6" role="alert">
-            <span class="font-medium">{{ session('error') }}</span>
-        </div>
-    @endif
 
     <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100 mb-6">
         {{-- <form action="{{ route('contents.index') }}" method="GET"

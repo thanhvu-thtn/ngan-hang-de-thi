@@ -9,16 +9,6 @@
         <p class="text-sm text-slate-500 mt-1">Thêm, sửa, xóa các quyền hạn trong hệ thống</p>
     </div>
 
-    @if(session('success'))
-        <div class="bg-green-50 border-l-4 border-green-500 p-4 mb-6 rounded-r-lg shadow-sm">
-            <p class="text-green-700 text-sm font-medium"><i class="fa-solid fa-check-circle mr-1"></i> {{ session('success') }}</p>
-        </div>
-    @endif
-    @if($errors->any())
-        <div class="bg-rose-50 border-l-4 border-rose-500 p-4 mb-6 rounded-r-lg shadow-sm">
-            <p class="text-rose-700 text-sm font-medium"><i class="fa-solid fa-triangle-exclamation mr-1"></i> {{ $errors->first() }}</p>
-        </div>
-    @endif
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div class="md:col-span-1">

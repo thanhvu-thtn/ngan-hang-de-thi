@@ -18,16 +18,7 @@
     </div>
 
     {{-- Thông báo thành công / lỗi (Style xịn từ hôm qua) --}}
-    @if(session('success'))
-        <div class="bg-emerald-50 text-emerald-600 border border-emerald-200 p-4 rounded-md mb-4 flex items-center">
-            <i class="fa-solid fa-circle-check mr-2"></i> {{ session('success') }}
-        </div>
-    @endif
-    @if(session('error'))
-        <div class="bg-rose-50 text-rose-600 border border-rose-200 p-4 rounded-md mb-4 flex items-center">
-            <i class="fa-solid fa-circle-xmark mr-2"></i> {{ session('error') }}
-        </div>
-    @endif
+    
 
     @if($errors->any())
         <div class="bg-rose-50 text-rose-600 border border-rose-200 p-4 rounded-md mb-4 shadow-sm">

@@ -22,7 +22,6 @@ class AssignmentController extends Controller
             ->get();
 
         // 2. Định nghĩa danh sách MÃ QUYỀN (name) muốn GIẤU khỏi Tổ trưởng
-        // Các quyền hệ thống của Admin thì khai báo vào đây
         $hiddenPermissions = [
             'quan-ly-user',
             'quan-ly-vai-tro',
@@ -30,7 +29,7 @@ class AssignmentController extends Controller
             // Thêm các quyền nhạy cảm khác nếu có...
         ];
 
-        // 3. Truy vấn lấy quyền TỪ DATABASE, nhưng LỌC BỎ các quyền trong mảng $hiddenPermissions
+        // 3. Truy vấn lấy quyền TỪ DATABASE, lọc bỏ các quyền hệ thống
         $permissions = Permission::whereNotIn('name', $hiddenPermissions)->get();
 
         return view('assignments.index', compact('teachers', 'permissions'));
@@ -46,17 +45,28 @@ class AssignmentController extends Controller
         $teacherIds = $request->input('teacher_ids', []);
         $permissionsData = $request->input('permissions', []);
 
-        foreach ($teacherIds as $teacherId) {
-            $teacher = User::where('id', $teacherId)
-                ->where('subject_id', $user->subject_id)
-                ->first();
+        // [TỐI ƯU CODE THỪA]: Thay vì query tìm User từng lần trong vòng lặp (gây lỗi N+1 Query)
+        // Ta gom lại lấy 1 lần duy nhất danh sách các giáo viên hợp lệ
+        $teachers = User::whereIn('id', $teacherIds)
+            ->where('subject_id', $user->subject_id)
+            ->get();
 
-            if ($teacher) {
-                $permsToAssign = $permissionsData[$teacherId] ?? []; 
-                $teacher->syncPermissions($permsToAssign);
+        foreach ($teachers as $teacher) {
+            $permsToAssign = $permissionsData[$teacher->id] ?? []; 
+            
+            // 1. Cập nhật phân quyền mới bằng Spatie
+            $teacher->syncPermissions($permsToAssign);
+
+            // ==========================================
+            // 2. LOGIC MỚI: DỌN RÁC DATABASE CHUYÊN ĐỀ
+            // ==========================================
+            // Nếu trong danh sách quyền mới KHÔNG CÓ quyền 'bien-soan-cau-hoi'
+            if (!in_array('bien-soan-cau-hoi', $permsToAssign)) {
+                // Xóa trắng toàn bộ các chuyên đề đã phân cho giáo viên này trong bảng topic_user
+                $teacher->topics()->detach();
             }
         }
 
-        return redirect()->route('assignments.index')->with('success', 'Đã cập nhật phân quyền thành công!');
+        return redirect()->route('assignments.index')->with('success', 'Đã cập nhật phân quyền và dọn dẹp dữ liệu thành công!');
     }
 }

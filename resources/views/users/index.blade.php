@@ -14,20 +14,6 @@
         </a>
     </div>
 
-    @if(session('success'))
-        <div class="bg-emerald-50 text-emerald-600 p-4 rounded-lg mb-6 border border-emerald-200 flex items-center gap-3">
-            <i class="fa-solid fa-circle-check text-xl"></i>
-            <span class="font-medium">{{ session('success') }}</span>
-        </div>
-    @endif
-
-    @if(session('error'))
-        <div class="bg-rose-50 text-rose-600 p-4 rounded-lg mb-6 border border-rose-200 flex items-center gap-3">
-            <i class="fa-solid fa-triangle-exclamation text-xl"></i>
-            <span class="font-medium">{{ session('error') }}</span>
-        </div>
-    @endif
-
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <table class="w-full text-left text-sm text-slate-600">
             <thead class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200 uppercase text-xs">

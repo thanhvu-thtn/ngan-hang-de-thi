@@ -32,12 +32,6 @@
             </a>
         </div>
 
-        @if (session('success'))
-            <div class="bg-green-50 border-l-4 border-green-500 text-green-700 p-4 rounded shadow-sm mb-6">
-                <span class="font-medium">{{ session('success') }}</span>
-            </div>
-        @endif
-
         <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">

@@ -81,6 +81,10 @@ Route::middleware('auth')->group(function () {
 });
 
 // Group dành cho Quản lý Ngân hàng câu hỏi
-Route::middleware(['auth', 'role_or_permission:Admin|Tổ trưởng|bien-soan-cau-hoi|sua-cau-hoi'])->group(function () {
+Route::middleware(['auth', 'role_or_permission:admin|to-truong|bien-soan-cau-hoi'])->group(function () {
     Route::get('/questions', [QuestionController::class, 'index'])->name('questions.index');
+    
+    // Sau này bạn có thể ném các route liên quan vào đây, ví dụ:
+    // Route::get('/questions/create', ...);
+    // Route::post('/questions', ...);
 });

@@ -53,4 +53,11 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+    /**
+     * Lấy danh sách các chuyên đề (topics) được phân công cho user.
+     */
+    public function topics()
+    {
+        return $this->belongsToMany(Topic::class, 'topic_user', 'user_id', 'topic_id')->withTimestamps();
+    }
 }

@@ -19,11 +19,7 @@
         </div>
 
         {{-- Thông báo --}}
-        @if (session('success'))
-            <div class="bg-emerald-50 text-emerald-600 border border-emerald-200 p-4 rounded-md mb-4 flex items-center">
-                <i class="fa-solid fa-circle-check mr-2"></i> {{ session('success') }}
-            </div>
-        @endif
+
 
         {{-- Thông báo lỗi --}}
         @if ($errors->any())

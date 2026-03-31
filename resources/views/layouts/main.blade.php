@@ -7,8 +7,6 @@
     <title>@yield('title', 'Ngân hàng câu hỏi')</title>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-
-
 </head>
 
 <body class="bg-slate-50 font-sans text-slate-800 antialiased h-screen flex flex-col overflow-hidden">
@@ -19,10 +17,22 @@
 
         @include('layouts.sidebar')
 
+        <main class="flex-1 bg-slate-50 p-8 overflow-y-auto relative">
+            
+            {{-- KHỐI HIỂN THỊ THÔNG BÁO GÓC TRÊN BÊN PHẢI (TOÀN CỤC) --}}
+            @if (session('success'))
+                <div class="auto-dismiss fixed top-24 right-8 z-50 p-4 min-w-[300px] text-sm text-emerald-800 rounded-xl bg-emerald-50 border border-emerald-200 shadow-lg transition-opacity duration-500" role="alert">
+                    <span class="font-bold"><i class="fa-solid fa-circle-check mr-1"></i> Thành công!</span> {{ session('success') }}
+                </div>
+            @endif
 
+            @if (session('error'))
+                <div class="auto-dismiss fixed top-24 right-8 z-50 p-4 min-w-[300px] text-sm text-rose-800 rounded-xl bg-rose-50 border border-rose-200 shadow-lg transition-opacity duration-500" role="alert">
+                    <span class="font-bold"><i class="fa-solid fa-circle-exclamation mr-1"></i> Lỗi!</span> {{ session('error') }}
+                </div>
+            @endif
+            {{-- KẾT THÚC KHỐI THÔNG BÁO --}}
 
-        <main class="flex-1 bg-slate-50 p-8 overflow-y-auto">
-            {{-- Thêm pt-20 ở đây để tránh bị Navbar đè lên --}}
             <div class="mt-20">
                 @yield('content')
             </div>
@@ -36,6 +46,22 @@
         </div>
     </footer>
 
+    {{-- SCRIPT JS TỰ ĐỘNG TẮT THÔNG BÁO SAU 3 GIÂY --}}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const alerts = document.querySelectorAll('.auto-dismiss');
+            alerts.forEach(function (alert) {
+                // Đợi 3 giây
+                setTimeout(function () {
+                    alert.style.opacity = '0'; // Mờ dần
+                    // Đợi thêm 0.5s cho hiệu ứng mờ xong rồi xóa hẳn khỏi HTML
+                    setTimeout(function () {
+                        alert.remove();
+                    }, 500); 
+                }, 3000); 
+            });
+        });
+    </script>
 </body>
 
 </html>

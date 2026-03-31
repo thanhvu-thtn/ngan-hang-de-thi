@@ -1,6 +1,6 @@
-<aside class="w-64 bg-white border-r border-slate-200 shadow-sm overflow-y-auto relative z-10">
-    <div class="p-4 mb-24"> 
-        
+<aside class="w-64 bg-white border-r border-slate-200 shadow-sm overflow-y-auto pt-20 relative z-10">
+    <div class="p-4 mb-24">
+
         {{-- NHÓM HỆ THỐNG: Chỉ dành cho Admin --}}
         @hasrole('Admin')
             <div id="menu-he-thong" class="sidebar-group block">
@@ -19,16 +19,17 @@
                             class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i
                                 class="fa-solid fa-clipboard-question w-5 text-center mr-2 text-slate-400"></i> Loại câu
                             hỏi</a></li>
-                    <li><a href="{{ route('cognitive-levels.index') }}" 
-                            class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i 
+                    <li><a href="{{ route('cognitive-levels.index') }}"
+                            class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i
                                 class="fa-solid fa-brain w-5 text-center mr-2 text-slate-400"></i> Mức độ nhận thức</a></li>
-                    <li><a href="{{ route('question-layouts.index') }}" 
-                            class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i 
-                                class="fa-solid fa-border-all w-5 text-center mr-2 text-slate-400"></i> Cấu hình hiển thị</a></li>
-                    
+                    <li><a href="{{ route('question-layouts.index') }}"
+                            class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i
+                                class="fa-solid fa-border-all w-5 text-center mr-2 text-slate-400"></i> Cấu hình hiển
+                            thị</a></li>
+
                     {{-- THÊM MỚI: QUẢN LÝ QUYỀN --}}
-                    <li><a href="{{ route('permissions.index') }}" 
-                            class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i 
+                    <li><a href="{{ route('permissions.index') }}"
+                            class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i
                                 class="fa-solid fa-key w-5 text-center mr-2 text-slate-400"></i> Quản lý Quyền</a></li>
                 </ul>
             </div>
@@ -52,19 +53,15 @@
         @endhasanyrole
 
         {{-- NHÓM CÂU HỎI: Chỉ những người có thẩm quyền mới thấy --}}
-        @if(auth()->check() && (auth()->user()->hasAnyRole(['Admin', 'Tổ trưởng']) || auth()->user()->can('bien-soan-cau-hoi') || auth()->user()->can('sua-cau-hoi')))
-            <div id="menu-cau-hoi" class="sidebar-group mt-6">
-                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Câu hỏi</h3>
-                <ul class="space-y-1">
-                    <li>
-                        <a href="{{ route('questions.index') }}"
-                            class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition">
-                            <i class="fa-solid fa-layer-group w-5 text-center mr-2 text-slate-400"></i> Ngân hàng câu hỏi
-                        </a>
-                    </li>
-                </ul>
-            </div>
-        @endif
+        @can('bien-soan-cau-hoi')
+            <li>
+                <a href="{{ route('questions.index') }}"
+                    class="flex items-center p-2 text-slate-700 rounded-lg hover:bg-slate-100 group">
+                    <i class="fa-solid fa-layer-group text-slate-400 group-hover:text-blue-600 transition duration-75"></i>
+                    <span class="ms-3">Ngân hàng câu hỏi</span>
+                </a>
+            </li>
+        @endcan
 
         {{-- NHÓM ĐỀ THI: Hiện nếu có quyền tạo đề --}}
         @can('tao-de-thi')

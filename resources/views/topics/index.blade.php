@@ -16,21 +16,6 @@
             </a>
         </div>
 
-        @if (session('success'))
-            <div
-                class="bg-emerald-50 text-emerald-600 p-4 rounded-lg mb-6 border border-emerald-200 flex items-center gap-3">
-                <i class="fa-solid fa-circle-check text-xl"></i>
-                <span class="font-medium">{{ session('success') }}</span>
-            </div>
-        @endif
-
-        @if (session('error'))
-            <div class="bg-rose-50 text-rose-600 p-4 rounded-lg mb-6 border border-rose-200 flex items-center gap-3">
-                <i class="fa-solid fa-triangle-exclamation text-xl"></i>
-                <span class="font-medium">{{ session('error') }}</span>
-            </div>
-        @endif
-
         <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 mb-6">
             <form action="{{ route('topics.index') }}" method="GET" class="flex flex-wrap items-end gap-4">
 

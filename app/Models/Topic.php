@@ -36,4 +36,12 @@ class Topic extends Model
     {
         return $this->hasMany(Content::class);
     }
+
+    /**
+     * Lấy danh sách giáo viên được phân công chuyên đề này.
+     */
+    public function users()
+    {
+        return $this->belongsToMany(User::class, 'topic_user', 'topic_id', 'user_id')->withTimestamps();
+    }
 }
