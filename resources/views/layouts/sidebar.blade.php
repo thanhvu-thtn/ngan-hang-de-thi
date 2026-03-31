@@ -1,5 +1,7 @@
 <aside class="w-64 bg-white border-r border-slate-200 shadow-sm overflow-y-auto relative z-10">
-    <div class="p-4 mb-24"> {{-- NHÓM HỆ THỐNG: Chỉ dành cho Admin --}}
+    <div class="p-4 mb-24"> 
+        
+        {{-- NHÓM HỆ THỐNG: Chỉ dành cho Admin --}}
         @hasrole('Admin')
             <div id="menu-he-thong" class="sidebar-group block">
                 <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Hệ thống</h3>
@@ -20,10 +22,14 @@
                     <li><a href="{{ route('cognitive-levels.index') }}" 
                             class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i 
                                 class="fa-solid fa-brain w-5 text-center mr-2 text-slate-400"></i> Mức độ nhận thức</a></li>
-                    {{-- ĐÂY LÀ PHẦN MỚI THÊM CHO QUESTION LAYOUTS --}}
                     <li><a href="{{ route('question-layouts.index') }}" 
                             class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i 
                                 class="fa-solid fa-border-all w-5 text-center mr-2 text-slate-400"></i> Cấu hình hiển thị</a></li>
+                    
+                    {{-- THÊM MỚI: QUẢN LÝ QUYỀN --}}
+                    <li><a href="{{ route('permissions.index') }}" 
+                            class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i 
+                                class="fa-solid fa-key w-5 text-center mr-2 text-slate-400"></i> Quản lý Quyền</a></li>
                 </ul>
             </div>
         @endhasrole
@@ -45,25 +51,20 @@
             </div>
         @endhasanyrole
 
-        {{-- NHÓM CÂU HỎI: Hiện dựa trên quyền biên soạn/biên tập --}}
-        @canany(['bien-soan-cau-hoi', 'bien-tap-cau-hoi'])
+        {{-- NHÓM CÂU HỎI: Chỉ những người có thẩm quyền mới thấy --}}
+        @if(auth()->check() && (auth()->user()->hasAnyRole(['Admin', 'Tổ trưởng']) || auth()->user()->can('bien-soan-cau-hoi') || auth()->user()->can('sua-cau-hoi')))
             <div id="menu-cau-hoi" class="sidebar-group mt-6">
                 <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Câu hỏi</h3>
                 <ul class="space-y-1">
-                    @can('bien-soan-cau-hoi')
-                        <li><a href="#"
-                                class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i
-                                    class="fa-solid fa-plus-circle w-5 text-center mr-2 text-slate-400"></i> Thêm mới câu
-                                hỏi</a></li>
-                    @endcan
-                    @can('bien-tap-cau-hoi')
-                        <li><a href="#"
-                                class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i
-                                    class="fa-solid fa-edit w-5 text-center mr-2 text-slate-400"></i> Biên tập câu hỏi</a></li>
-                    @endcan
+                    <li>
+                        <a href="{{ route('questions.index') }}"
+                            class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition">
+                            <i class="fa-solid fa-layer-group w-5 text-center mr-2 text-slate-400"></i> Ngân hàng câu hỏi
+                        </a>
+                    </li>
                 </ul>
             </div>
-        @endcanany
+        @endif
 
         {{-- NHÓM ĐỀ THI: Hiện nếu có quyền tạo đề --}}
         @can('tao-de-thi')
@@ -91,7 +92,7 @@
 
     </div>
 
-    {{-- PHẦN USER INFO & LOGOUT (Giữ nguyên cấu trúc của bạn) --}}
+    {{-- PHẦN USER INFO & LOGOUT --}}
     <div class="fixed bottom-0 left-0 w-64 p-4 border-t border-slate-200 bg-white">
         <div class="flex items-center gap-3 mb-4 px-2">
             <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">

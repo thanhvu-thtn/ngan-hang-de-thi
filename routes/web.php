@@ -6,6 +6,7 @@ use App\Http\Controllers\CognitiveLevelController;
 use App\Http\Controllers\ContentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ObjectiveController;
+use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\QuestionLayoutController;
 use App\Http\Controllers\QuestionTypeController;
 use App\Http\Controllers\SubjectController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\TopicController;
 use App\Http\Controllers\TopicTypeController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\PermissionController;
 
 // 1. TRANG CHỦ & LOGIN
 Route::get('/', function () {
@@ -51,6 +53,8 @@ Route::middleware('auth')->group(function () {
         Route::resource('question-layouts', QuestionLayoutController::class)->parameters([
             'question-layouts' => 'question_layout',
         ]);
+        // Admin toàn quyền quản lý Permissions
+        Route::resource('permissions', PermissionController::class)->except(['show', 'create']);
     });
 
     // --- NHÓM TỔ TRƯỞNG & ADMIN (Mở rộng cho mục tiêu của bạn) ---
@@ -74,4 +78,9 @@ Route::middleware('auth')->group(function () {
         });
     });
 
+});
+
+// Group dành cho Quản lý Ngân hàng câu hỏi
+Route::middleware(['auth', 'role_or_permission:Admin|Tổ trưởng|bien-soan-cau-hoi|sua-cau-hoi'])->group(function () {
+    Route::get('/questions', [QuestionController::class, 'index'])->name('questions.index');
 });

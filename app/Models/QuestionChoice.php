@@ -9,11 +9,19 @@ class QuestionChoice extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['question_id', 'content', 'is_correct', 'order'];
+    // Thêm 'ratio' vào fillable
+    protected $fillable = ['question_id', 'content', 'is_correct', 'order', 'ratio'];
 
-    // Cast is_correct về dạng boolean tự động
+    // Ép kiểu dữ liệu
     protected $casts = [
         'is_correct' => 'boolean',
+        'ratio' => 'float', // Ép tự động về float khi lấy từ DB
+    ];
+
+    // Cấu hình giá trị mặc định khi new Model
+    protected $attributes = [
+        'is_correct' => false,
+        'ratio' => 1.0,
     ];
 
     // Thuộc về 1 Câu hỏi

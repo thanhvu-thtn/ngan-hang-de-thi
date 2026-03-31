@@ -11,6 +11,7 @@ class Question extends Model
 
     // Cập nhật lại mảng fillable theo cấu trúc mới
     protected $fillable = [
+        'tag_name', // Thêm dòng này
         'name', 
         'question_type_id', 
         'cognitive_level_id', 
@@ -60,5 +61,11 @@ class Question extends Model
     public function objectives()
     {
         return $this->belongsToMany(Objective::class, 'objective_question');
+    }
+
+    // Một câu hỏi có tối đa 1 lời giải (hasOne)
+    public function explanation()
+    {
+        return $this->hasOne(QuestionExplanation::class);
     }
 }
