@@ -9,7 +9,8 @@ class SharedContext extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['content', 'note'];
+    // Đã thêm 'tag_name' vào mảng fillable
+    protected $fillable = ['tag_name', 'content', 'note'];
 
     // Một dữ liệu dùng chung có thể chứa nhiều câu hỏi (chùm câu hỏi)
     public function questions()

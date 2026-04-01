@@ -14,11 +14,13 @@ use App\Http\Controllers\TopicController;
 use App\Http\Controllers\TopicTypeController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\TopicAssignmentController;
 
 // 1. TRANG CHỦ & LOGIN
 Route::get('/', function () {
-    return auth()->check() ? redirect()->route('dashboard') : redirect()->route('login');
+    return Auth::check() ? redirect()->route('dashboard') : redirect()->route('login');
 });
 
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
@@ -75,6 +77,10 @@ Route::middleware('auth')->group(function () {
             // Quản lý Phân quyền Giáo viên (Dành cho Tổ trưởng)
             Route::get('/assignments', [AssignmentController::class, 'index'])->name('assignments.index');
             Route::post('/assignments', [AssignmentController::class, 'update'])->name('assignments.update');
+
+            // Quản lý Phân công chuyên đề cho giáo viên (MỚI THÊM)
+            Route::get('/topic-assignments', [TopicAssignmentController::class, 'index'])->name('topic-assignments.index');
+            Route::post('/topic-assignments', [TopicAssignmentController::class, 'update'])->name('topic-assignments.update');
         });
     });
 
