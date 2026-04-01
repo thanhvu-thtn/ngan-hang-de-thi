@@ -18,7 +18,10 @@ class Question extends Model
         'shared_context_id', 
         'layout_id', 
         'stem', 
-        'difficulty_index'
+        'difficulty_index',
+        'status',       // Mới thêm
+        'checker_id',   // Mới thêm
+        'checked_at',   // Mới thêm
     ];
 
     // Thuộc về 1 Loại câu hỏi
@@ -68,4 +71,28 @@ class Question extends Model
     {
         return $this->hasOne(QuestionExplanation::class);
     }
+
+    // 3. Mối quan hệ: Người thẩm định câu hỏi
+    public function checker()
+    {
+        return $this->belongsTo(User::class, 'checker_id');
+    }
+
+    // 4. Các hàm Scope hỗ trợ truy vấn nhanh sau này
+    public function scopePending($query)
+    {
+        return $query->where('status', 0); // Chờ duyệt
+    }
+
+    public function scopeApproved($query)
+    {
+        return $query->where('status', 1); // Đạt chuẩn
+    }
+
+    public function scopeRejected($query)
+    {
+        return $query->where('status', 2); // Cần sửa lại
+    }
+
+    
 }

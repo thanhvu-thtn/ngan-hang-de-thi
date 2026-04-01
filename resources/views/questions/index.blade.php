@@ -22,7 +22,7 @@
                         <span id="toggle-btn-text">Hiện bộ lọc chuyên đề</span>
                     </button>
 
-                    <a href="#" class="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition shadow-lg shadow-blue-200">
+                    <a href="{{ route('questions.create') }}" class="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition shadow-lg shadow-blue-200">
                         <i class="fa-solid fa-plus"></i> Thêm câu hỏi
                     </a>
                 </div>

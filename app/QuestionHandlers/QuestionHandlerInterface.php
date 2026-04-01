@@ -2,14 +2,28 @@
 
 namespace App\QuestionHandlers;
 
+use App\Models\Question;
+use Illuminate\Http\Request;
+
 interface QuestionHandlerInterface
 {
-    // Hàm validate dữ liệu đầu vào từ Form
-    public function validateData($requestData);
+    /**
+     * Xác thực dữ liệu đầu vào.
+     */
+    public function validateData(Request $request): array;
 
-    // Hàm lưu câu hỏi và đáp án vào Database
-    public function save($questionData, $choicesData);
+    /**
+     * Lưu mới câu hỏi.
+     */
+    public function store(array $validatedData): Question;
 
-    // Hàm trả về View (form nhập liệu) tương ứng cho loại câu hỏi này
-    public function renderForm();
+    /**
+     * Cập nhật câu hỏi.
+     */
+    public function update(Question $question, array $validatedData): Question;
+
+    /**
+     * Lấy dữ liệu chi tiết của câu hỏi (dùng để hiển thị hoặc nhét vào Service xuất file).
+     */
+    public function getDetails(Question $question): array;
 }

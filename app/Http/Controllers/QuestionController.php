@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Topic;
+use App\Models\CognitiveLevel;
 // use App\Models\Question; // Sau này sẽ dùng
+use App\Models\QuestionType;
+use App\Models\Topic;
 use App\Models\User;
+use App\QuestionHandlers\EssayHandler;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -57,5 +60,41 @@ class QuestionController extends Controller
         $treeByGrade = $topics->groupBy('grade');
 
         return view('questions.index', compact('treeByGrade', 'hasNoAssignedTopics'));
+    }
+
+    // Thêm mới
+    public function create()
+    {
+        // 1. Lấy danh mục tham số cấu hình
+        $cognitiveLevels = CognitiveLevel::orderBy('level_weight', 'asc')->get();
+        $questionTypes = QuestionType::all();
+
+        // 2. Lấy cây chuyên đề của User hiện tại (Giống hệt logic bên hàm index)
+        // Lấy các topics mà user được phân công, kèm theo loại chuyên đề, nội dung và mục tiêu
+        $topics = auth()->user()->topics()
+            ->with(['topicType', 'contents.objectives'])
+            ->orderBy('grade', 'desc')
+            ->orderBy('order', 'asc')
+            ->get();
+
+        // Nhóm các chuyên đề lại theo khối (grade)
+        $treeByGrade = $topics->groupBy('grade');
+
+        // 3. Render ra giao diện
+        return view('questions.create', compact('cognitiveLevels', 'questionTypes', 'treeByGrade'));
+    }
+
+    // Thêm mới
+    public function store(Request $request)
+    {
+        // Validation sẽ được xử lý trong QuestionHandler
+        // Chỉ cần gọi hàm validate của handler để nhận về dữ liệu đã được xác thực
+        $handler = new EssayHandler;
+        $validatedData = $handler->validate($request);
+
+        // Sau khi có dữ liệu đã xác thực, gọi hàm store của handler để lưu vào database
+        $question = $handler->store($validatedData);
+
+        return redirect()->route('questions.index')->with('success', 'Thêm câu hỏi thành công. Vui lòng chờ duyệt.');
     }
 }
