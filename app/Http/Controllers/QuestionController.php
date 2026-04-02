@@ -3,98 +3,96 @@
 namespace App\Http\Controllers;
 
 use App\Models\CognitiveLevel;
-// use App\Models\Question; // Sau này sẽ dùng
 use App\Models\QuestionType;
 use App\Models\Topic;
-use App\Models\User;
-use App\QuestionHandlers\EssayHandler;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class QuestionController extends Controller
 {
-    public function index(Request $request)
+    /**
+     * Danh sách câu hỏi / Chọn chuyên đề
+     */
+    public function index()
     {
-        /** @var User $user */
-        $user = Auth::user();
-        // In ra màn hình xem user này đang có những role gì
-        // dd($user->getRoleNames());
-
-        // Chuẩn bị Query lấy Topic kèm theo Content -> Objective -> Số lượng Question
-        $query = Topic::with(['topicType', 'contents.objectives' => function ($q) {
-            $q->withCount('questions'); // Tự động đếm số câu hỏi của từng objective
-        }]);
-
-        // ==========================================
-        // LOGIC KIỂM TRA QUYỀN TRUY XUẤT CHUYÊN ĐỀ
-        // ==========================================
-        $hasNoAssignedTopics = false;
-
-        // Xóa dòng dd($user->getRoleNames()); đi nhé
-
-        if ($user->hasRole('admin') || $user->hasRole('Admin')) {
-            // 1. Admin: Thấy TOÀN BỘ chuyên đề của toàn trường
-            // Không cần where thêm gì cả
-
-        } elseif ($user->hasRole('Tổ trưởng')) { // SỬA ĐÚNG CHỮ NÀY
-            // 2. Tổ trưởng: Thấy TOÀN BỘ chuyên đề của MÔN HỌC mình quản lý
-            $query->where('subject_id', $user->subject_id);
-
-        } else {
-            // 3. Giáo viên bình thường: Chỉ thấy các chuyên đề được phân công
-            $assignedTopicIds = $user->topics()->pluck('topics.id');
-
-            if ($assignedTopicIds->isEmpty()) {
-                $hasNoAssignedTopics = true;
-                $query->whereRaw('1 = 0');
-            } else {
-                $query->whereIn('id', $assignedTopicIds);
-            }
-        }
-
-        // Thực thi query, sắp xếp theo khối và thứ tự, sau đó nhóm theo khối
-        $topics = $query->orderBy('grade')
-            ->orderBy('order')
-            ->get();
-
+        $topics = $this->getTopicsByRole();
         $treeByGrade = $topics->groupBy('grade');
+        $hasNoAssignedTopics = $topics->isEmpty();
 
         return view('questions.index', compact('treeByGrade', 'hasNoAssignedTopics'));
     }
 
-    // Thêm mới
+    /**
+     * Bước 1: Giao diện thiết lập thông tin ban đầu
+     */
     public function create()
     {
-        // 1. Lấy danh mục tham số cấu hình
         $cognitiveLevels = CognitiveLevel::orderBy('level_weight', 'asc')->get();
         $questionTypes = QuestionType::all();
 
-        // 2. Lấy cây chuyên đề của User hiện tại (Giống hệt logic bên hàm index)
-        // Lấy các topics mà user được phân công, kèm theo loại chuyên đề, nội dung và mục tiêu
-        $topics = auth()->user()->topics()
-            ->with(['topicType', 'contents.objectives'])
-            ->orderBy('grade', 'desc')
-            ->orderBy('order', 'asc')
-            ->get();
+        // Gọi lại hàm dùng chung để lấy cây chuyên đề chuẩn theo phân quyền
+        $treeByGrade = $this->getTopicsByRole()->groupBy('grade');
 
-        // Nhóm các chuyên đề lại theo khối (grade)
-        $treeByGrade = $topics->groupBy('grade');
-
-        // 3. Render ra giao diện
         return view('questions.create', compact('cognitiveLevels', 'questionTypes', 'treeByGrade'));
     }
 
-    // Thêm mới
-    public function store(Request $request)
+    /**
+     * Bước 1 (Xử lý): Lưu nháp câu hỏi và Chuyển hướng sang Bước 2
+     */
+    public function storeSetup(Request $request)
     {
-        // Validation sẽ được xử lý trong QuestionHandler
-        // Chỉ cần gọi hàm validate của handler để nhận về dữ liệu đã được xác thực
-        $handler = new EssayHandler;
-        $validatedData = $handler->validate($request);
+        // 1. Validate dữ liệu Bước 1
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'tag_name' => 'required|string|unique:questions,tag_name',
+            'type' => 'required|exists:question_types,id',
+            'level' => 'required|exists:cognitive_levels,id',
+            'objective_ids' => 'required|array',
+            'objective_ids.*' => 'exists:objectives,id',
+        ], [
+            'tag_name.unique' => 'Mã / Từ khóa này đã tồn tại, vui lòng nhập mã khác.',
+            'objective_ids.required' => 'Bạn phải chọn ít nhất 1 mục tiêu đánh giá.',
+        ]);
 
-        // Sau khi có dữ liệu đã xác thực, gọi hàm store của handler để lưu vào database
-        $question = $handler->store($validatedData);
+        // 2. LƯU VÀO SESSION thay vì Database (Lưu luôn cả objective_ids trong mảng này)
+        session()->put('question_setup', $validated);
 
-        return redirect()->route('questions.index')->with('success', 'Thêm câu hỏi thành công. Vui lòng chờ duyệt.');
+        // 3. Lấy mã code và ép về chữ thường để khớp với route (vd: 'es', 'mc')
+        $typeCode = strtolower(QuestionType::find($validated['type'])->code);
+
+        // 4. Chuyển hướng sang Bước 2 tương ứng
+        return redirect()->route("questions.{$typeCode}.create");
+    }
+
+    // ==========================================
+    // CÁC HÀM HELPER DÙNG CHUNG TRONG CLASS
+    // ==========================================
+
+    /**
+     * Lấy danh sách Topic dựa theo phân quyền User (Tránh lặp code)
+     */
+    private function getTopicsByRole()
+    {
+        $user = Auth::user();
+
+        $query = Topic::with(['topicType', 'contents.objectives' => function ($q) {
+            $q->withCount('questions');
+        }]);
+
+        if ($user->hasRole(['admin', 'Admin'])) {
+            // Admin thấy toàn bộ
+        } elseif ($user->hasRole('Tổ trưởng')) {
+            // Tổ trưởng thấy theo môn
+            $query->where('subject_id', $user->subject_id);
+        } else {
+            // Giáo viên thấy theo phân công
+            $assignedTopicIds = $user->topics()->pluck('topics.id');
+            if ($assignedTopicIds->isEmpty()) {
+                return collect(); // Trả về mảng rỗng luôn cho lẹ
+            }
+            $query->whereIn('id', $assignedTopicIds);
+        }
+
+        return $query->orderBy('grade')->orderBy('order')->get();
     }
 }

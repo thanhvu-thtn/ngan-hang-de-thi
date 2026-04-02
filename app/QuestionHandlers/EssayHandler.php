@@ -3,100 +3,116 @@
 namespace App\QuestionHandlers;
 
 use App\Models\Question;
-use App\Models\QuestionExplanation;
+use App\Services\ImageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class EssayHandler implements QuestionHandlerInterface
 {
+    protected ImageService $imageService;
+
     /**
-     * Xác thực dữ liệu form gửi lên
+     * Inject ImageService để xử lý ảnh trong nội dung TinyMCE
+     */
+    public function __construct(ImageService $imageService)
+    {
+        $this->imageService = $imageService;
+    }
+
+    /**
+     * 1. Validate dữ liệu gửi lên từ Form Bước 2 (Tự luận)
      */
     public function validateData(Request $request): array
     {
         return $request->validate([
-            'tag_name'           => 'nullable|string|max:255',
-            'question_type_id'   => 'required|integer', // ID của loại câu Tự luận
-            'cognitive_level_id' => 'required|integer', // Mức độ (Nhận biết, Thông hiểu...)
-            'stem'               => 'required|string',  // Nội dung câu hỏi
-            'explanation'        => 'required|string',  // Hướng dẫn chấm / Lời giải
-            'difficulty_index'   => 'nullable|numeric|min:0|max:1',
+            'stem' => 'required|string',
+            'explanation' => 'nullable|string',
         ], [
-            'stem.required'        => 'Nội dung câu hỏi không được để trống.',
-            'explanation.required' => 'Hướng dẫn chấm/Lời giải không được để trống.',
+            'stem.required' => 'Nội dung câu hỏi (đề bài) không được để trống.',
         ]);
     }
 
     /**
-     * Lưu mới vào Database
+     * 2. Lưu chi tiết câu hỏi
+     * Lưu ý: Sửa lỗi dùng sai tên quan hệ 'explanations' thành 'explanation'
      */
-    public function store(array $validatedData): Question
+    public function store(array $data): Question
     {
-        // Dùng Transaction để nếu lỗi ở bảng sau thì bảng trước không bị lưu rác
-        return DB::transaction(function () use ($validatedData) {
-            
-            // 1. Tạo câu hỏi (status mặc định là 0 - Chờ duyệt)
+        return DB::transaction(function () use ($data) {
+            // Xử lý lưu ảnh vào local trước khi lưu vào DB
+            $cleanStem = $this->imageService->localizeImages($data['stem']);
+            $cleanExplanation = isset($data['explanation']) 
+                                ? $this->imageService->localizeImages($data['explanation']) 
+                                : null;
+
+            // 1. Tạo câu hỏi mới
             $question = Question::create([
-                'tag_name'           => $validatedData['tag_name'] ?? 'TL_' . time(), // Tạm tạo mã nếu rỗng
-                'question_type_id'   => $validatedData['question_type_id'],
-                'cognitive_level_id' => $validatedData['cognitive_level_id'],
-                'stem'               => $validatedData['stem'],
-                'difficulty_index'   => $validatedData['difficulty_index'] ?? 0.5,
-                'status'             => 0, 
+                'name' => $data['name'],
+                'tag_name' => $data['tag_name'],
+                'question_type_id' => $data['type'],
+                'cognitive_level_id' => $data['level'],
+                'stem' => $cleanStem,
             ]);
 
-            // 2. Tạo lời giải / Hướng dẫn chấm
-            QuestionExplanation::create([
-                'question_id' => $question->id,
-                'content'     => $validatedData['explanation'],
-            ]);
+            // 2. Gắn mục tiêu đánh giá (từ dữ liệu Bước 1)
+            if (!empty($data['objective_ids'])) {
+                $question->objectives()->sync($data['objective_ids']);
+            }
+
+            // 3. Tạo hướng dẫn chấm (Dùng đúng quan hệ 'explanation')
+            if (!empty($cleanExplanation)) {
+                $question->explanation()->create([
+                    'content' => $cleanExplanation,
+                ]);
+            }
 
             return $question;
         });
     }
 
     /**
-     * Cập nhật câu hỏi hiện tại
+     * 3. Cập nhật chi tiết câu hỏi (Khi Edit)
      */
     public function update(Question $question, array $validatedData): Question
     {
         return DB::transaction(function () use ($question, $validatedData) {
-            
-            // 1. Cập nhật câu hỏi & Reset trạng thái về 0 (Mất tick xanh)
+            // Xử lý ảnh trong nội dung cập nhật
+            $cleanStem = $this->imageService->localizeImages($validatedData['stem']);
+            $cleanExplanation = isset($validatedData['explanation']) 
+                                ? $this->imageService->localizeImages($validatedData['explanation']) 
+                                : null;
+
+            // Cập nhật đề bài
             $question->update([
-                'tag_name'           => $validatedData['tag_name'] ?? $question->tag_name,
-                'cognitive_level_id' => $validatedData['cognitive_level_id'],
-                'stem'               => $validatedData['stem'],
-                'difficulty_index'   => $validatedData['difficulty_index'] ?? $question->difficulty_index,
-                'status'             => 0,    // Đưa về nhãn đỏ
-                'checker_id'         => null, // Xóa người duyệt cũ
-                'checked_at'         => null, // Xóa ngày duyệt cũ
+                'stem' => $cleanStem,
             ]);
 
-            // 2. Cập nhật hoặc tạo mới lời giải (updateOrCreate)
-            // Lỡ trước đó câu này chưa có lời giải thì nó tự tạo mới
-            QuestionExplanation::updateOrCreate(
-                ['question_id' => $question->id],
-                ['content'     => $validatedData['explanation']]
-            );
+            // Cập nhật hoặc tạo mới lời giải (Dùng đúng quan hệ 'explanation')
+            if (!empty($cleanExplanation)) {
+                $question->explanation()->updateOrCreate(
+                    ['question_id' => $question->id],
+                    ['content' => $cleanExplanation]
+                );
+            } else {
+                $question->explanation()->delete();
+            }
 
             return $question;
         });
     }
 
     /**
-     * Lấy dữ liệu chi tiết
+     * 4. Trả về cấu trúc dữ liệu chuẩn
      */
     public function getDetails(Question $question): array
     {
-        // Gọi relation explanation ra (để load lời giải)
-        $question->load('explanation');
+        // Dùng $question->explanation thay vì $question->explanations()
+        $explanation = $question->explanation; 
 
         return [
-            'question'    => $question,
-            'stem'        => $question->stem,
-            'explanation' => $question->explanation ? $question->explanation->content : '',
-            'type'        => 'essay'
+            'type' => 'es',
+            'stem' => $question->stem,
+            'explanation' => $explanation ? $explanation->content : null,
         ];
     }
 }

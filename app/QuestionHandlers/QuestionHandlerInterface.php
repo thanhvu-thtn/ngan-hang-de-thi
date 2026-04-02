@@ -15,7 +15,7 @@ interface QuestionHandlerInterface
     /**
      * Lưu mới câu hỏi.
      */
-    public function store(array $validatedData): Question;
+   public function store(array $data): Question;
 
     /**
      * Cập nhật câu hỏi.
