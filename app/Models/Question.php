@@ -30,7 +30,7 @@ class Question extends Model
     ];
 
     // Thuộc về 1 Loại câu hỏi
-    public function type()
+    public function questionType()
     {
         return $this->belongsTo(QuestionType::class, 'question_type_id');
     }

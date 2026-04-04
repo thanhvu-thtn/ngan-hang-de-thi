@@ -1,26 +1,29 @@
-@extends('layouts.main') {{-- Hoặc layout chính của bạn --}}
+@extends('layouts.main')
 
 @section('content')
 <div class="max-w-5xl mx-auto py-10 px-4">
     
-    {{-- THANH TIẾN TRÌNH --}}
+    {{-- THANH TIẾN TRÌNH / HEADER --}}
     <div class="mb-8">
         <div class="flex items-center gap-4 text-sm font-medium text-slate-500">
-            <span class="flex items-center gap-2 text-emerald-600"><i class="fa-solid fa-circle-check"></i> Bước 1: Thiết lập</span>
+            <span class="flex items-center gap-2 text-emerald-600"><i class="fa-solid fa-circle-check"></i> Bước 1: Thiết lập cơ bản</span>
             <i class="fa-solid fa-chevron-right text-xs"></i>
-            <span class="flex items-center gap-2 text-blue-600 underline underline-offset-8 decoration-2 font-bold">Bước 2: Soạn nội dung Tự luận</span>
+            <span class="flex items-center gap-2 text-blue-600 underline underline-offset-8 decoration-2 font-bold">Bước 2: Cập nhật nội dung Tự luận</span>
         </div>
     </div>
 
     {{-- TÓM TẮT THÔNG TIN BƯỚC 1 --}}
     <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 mb-6 flex flex-wrap gap-6 text-sm">
-        <div><span class="text-slate-500">Tên:</span> <strong class="text-slate-700">{{ $setupData['name'] ?? '' }}</strong></div>
-        <div><span class="text-slate-500">Mã/Tag:</span> <code class="bg-slate-200 px-1.5 py-0.5 rounded text-blue-700 font-bold">{{ $setupData['tag_name'] ?? '' }}</code></div>
+        <div><span class="text-slate-500">Tên:</span> <strong class="text-slate-700">{{ $question->name }}</strong></div>
+        <div><span class="text-slate-500">Mã/Tag:</span> <code class="bg-slate-200 px-1.5 py-0.5 rounded text-blue-700 font-bold">{{ $question->tag_name }}</code></div>
+        <div><span class="text-slate-500">Loại:</span> <strong class="text-indigo-600">{{ $question->questionType->name ?? 'Tự luận' }}</strong></div>
     </div>
 
-    {{-- FORM SOẠN THẢO --}}
-    <form action="{{ route('questions.es.store') }}" method="POST">
+    {{-- FORM CẬP NHẬT --}}
+    {{-- LƯU Ý: Nhớ tạo route questions.es.update trong web.php --}}
+    <form action="{{ route('questions.es.update', $question->id) }}" method="POST">
         @csrf
+        @method('PUT')
 
         <div class="grid grid-cols-1 gap-8">
             
@@ -36,7 +39,8 @@
                     </button>
                 </div>
                 
-                <textarea name="stem" id="editor-stem" rows="10" required>{{ old('stem') }}</textarea>
+                {{-- Đổ dữ liệu cũ của đề bài vào đây --}}
+                <textarea name="stem" id="editor-stem" rows="10" required>{{ old('stem', $question->stem) }}</textarea>
                 @error('stem') <p class="text-rose-500 text-xs mt-2">{{ $message }}</p> @enderror
             </div>
 
@@ -52,19 +56,20 @@
                     </button>
                 </div>
                 
-                <textarea name="explanation" id="editor-explanation" rows="6">{{ old('explanation') }}</textarea>
+                {{-- Đổ dữ liệu cũ của lời giải. --}}
+                <textarea name="explanation" id="editor-explanation" rows="6">{{ old('explanation', $question->explanation->content ?? '') }}</textarea>
                 @error('explanation') <p class="text-rose-500 text-xs mt-2">{{ $message }}</p> @enderror
             </div>
 
             {{-- NÚT ĐIỀU HƯỚNG --}}
             <div class="flex justify-between items-center bg-slate-100 p-6 rounded-2xl border border-slate-200">
-                <a href="{{ route('questions.create') }}" class="text-slate-600 hover:text-slate-800 font-medium flex items-center gap-2">
+                <a href="{{ route('questions.edit', $question->id) }}" class="text-slate-600 hover:text-slate-800 font-medium flex items-center gap-2">
                     <i class="fa-solid fa-arrow-left"></i> Quay lại Bước 1
                 </a>
                 
                 <button type="submit" 
-                    class="px-10 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition shadow-lg shadow-emerald-200 flex items-center gap-2">
-                    Hoàn tất & Lưu câu hỏi <i class="fa-solid fa-check-double"></i>
+                    class="px-10 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-200 flex items-center gap-2">
+                    Cập nhật câu hỏi <i class="fa-solid fa-floppy-disk"></i>
                 </button>
             </div>
         </div>
@@ -84,9 +89,9 @@
             </button>
         </div>
         
-        {{-- Body Modal (Nơi chứa nội dung preview) --}}
-        <div id="preview-body" class="p-8 overflow-y-auto text-slate-800 text-base leading-relaxed" style="min-height: 250px;">
-            </div>
+        {{-- Body Modal --}}
+        <div id="preview-body" class="p-8 overflow-y-auto text-slate-800 text-base leading-relaxed katex-scan" style="min-height: 250px;">
+        </div>
         
         {{-- Footer Modal --}}
         <div class="bg-slate-50 p-4 border-t border-slate-200 flex justify-end">
