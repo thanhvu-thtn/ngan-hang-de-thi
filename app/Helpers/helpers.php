@@ -62,3 +62,51 @@ if (!function_exists('make_image_paths_local')) {
         return $content;
     }
 }
+
+if (!function_exists('clean_p_tags_in_tables')) {
+    /**
+     * Chỉ xóa thẻ <p> nằm bên trong thẻ <td> của bảng
+     */
+    function clean_p_tags_in_tables(string $html): string 
+    {
+        if (empty(trim($html))) {
+            return $html;
+        }
+
+        $dom = new DOMDocument();
+        // Tắt cảnh báo lỗi HTML không chuẩn
+        libxml_use_internal_errors(true);
+        
+        // Load HTML với UTF-8 để không bị lỗi font tiếng Việt
+        $dom->loadHTML('<?xml encoding="UTF-8">' . $html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        libxml_clear_errors();
+
+        // Lấy tất cả các thẻ <td>
+        $tds = $dom->getElementsByTagName('td');
+        
+        foreach ($tds as $td) {
+            $ps = $td->getElementsByTagName('p');
+            
+            // Phải lặp ngược từ dưới lên khi thay đổi cấu trúc DOM
+            for ($i = $ps->length - 1; $i >= 0; $i--) {
+                $p = $ps->item($i);
+                
+                $fragment = $dom->createDocumentFragment();
+                // Giữ lại nội dung bên trong thẻ <p>
+                while ($p->childNodes->length > 0) {
+                    $fragment->appendChild($p->childNodes->item(0));
+                }
+                
+                // Thêm một thẻ <br> vào cuối để thay thế cho khoảng cách của thẻ <p>
+                $fragment->appendChild($dom->createElement('br'));
+                
+                // Thay thế thẻ <p> bằng nội dung của nó + thẻ <br>
+                $p->parentNode->replaceChild($fragment, $p);
+            }
+        }
+
+        // Xuất ra chuỗi HTML và loại bỏ tag XML mặc định
+        $result = $dom->saveHTML();
+        return str_replace('<?xml encoding="UTF-8">', '', $result);
+    }
+}

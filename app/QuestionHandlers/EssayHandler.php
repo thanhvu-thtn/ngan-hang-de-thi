@@ -115,4 +115,44 @@ class EssayHandler implements QuestionHandlerInterface
             'explanation' => $explanation ? $explanation->content : null,
         ];
     }
+
+    /**
+     * 5. Xóa câu hỏi Tự luận và các dữ liệu liên quan
+     */
+    public function destroy(Question $question): void
+    {
+        // 1. DỌN DẸP FILE ẢNH VẬT LÝ TRONG Ổ CỨNG
+        // Quét và xóa ảnh trong đề bài (stem)
+        if (!empty($question->stem)) {
+            $this->imageService->deleteImagesFromContent($question->stem);
+        }
+
+        // Quét và xóa ảnh trong lời giải
+        $explanation = $question->explanation;
+        if ($explanation && !empty($explanation->content)) {
+            $this->imageService->deleteImagesFromContent($explanation->content);
+        }
+
+        // 2. XÓA DỮ LIỆU TRONG DATABASE (Dùng Transaction để đảm bảo an toàn)
+        DB::transaction(function () use ($question) {
+            
+            // Xóa tất cả các lựa chọn (Đề phòng rác dữ liệu nếu trước đó là câu trắc nghiệm)
+            if (method_exists($question, 'choices')) {
+                $question->choices()->delete();
+            }
+
+            // Xóa lời giải
+            if (method_exists($question, 'explanation')) {
+                $question->explanation()->delete();
+            }
+
+            // Bảng trung gian objective_question (nếu bạn không dùng ON DELETE CASCADE)
+            if (method_exists($question, 'objectives')) {
+                $question->objectives()->detach();
+            }
+
+            // Cuối cùng, xóa câu hỏi gốc
+            $question->delete();
+        });
+    }
 }

@@ -3,30 +3,59 @@
 @section('content')
     <div class="container mx-auto p-6">
         {{-- Header --}}
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-            <div>
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
+            {{-- Bên trái: Tiêu đề (Chiếm không gian tự nhiên) --}}
+            <div class="flex-shrink-0">
                 <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-3">
                     <div class="p-2 bg-blue-500 rounded-lg shadow-lg shadow-blue-200">
                         <i class="fa-solid fa-layer-group text-white text-sm"></i>
                     </div>
                     Ngân hàng câu hỏi
                 </h2>
-                <p class="text-slate-500 text-sm mt-1">Quản lý và tìm kiếm câu hỏi theo hệ thống chuyên đề được phân công.
-                </p>
+                <p class="text-slate-500 text-sm mt-1">Quản lý hệ thống câu hỏi chuyên đề.</p>
             </div>
 
+            {{-- Bên phải: Cụm 3 nút cùng kích thước, cùng hàng --}}
             @if (!$hasNoAssignedTopics)
-                <div class="flex items-center gap-3">
+                <div class="flex flex-wrap items-center justify-end gap-3 flex-1">
+
+                    {{-- 1. Ô tìm kiếm (Chiều cao h-11) --}}
+                    <form action="{{ route('questions.index') }}" method="GET" class="relative flex items-center h-11">
+                        @if (request('filter_objective_ids'))
+                            @foreach (request('filter_objective_ids') as $id)
+                                <input type="hidden" name="filter_objective_ids[]" value="{{ $id }}">
+                            @endforeach
+                        @endif
+
+                        <div class="relative h-full group">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                <i
+                                    class="fa-solid fa-hashtag text-slate-400 group-focus-within:text-blue-500 transition-colors"></i>
+                            </div>
+                            <input type="text" name="tag_name" value="{{ request('tag_name') }}"
+                                class="h-full w-44 xl:w-56 pl-9 pr-16 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                                placeholder="Mã câu hỏi...">
+
+                            <button type="submit"
+                                class="absolute right-1.5 top-1.5 bottom-1.5 px-3 bg-slate-800 text-white rounded-lg text-xs font-bold hover:bg-slate-700 transition flex items-center gap-1">
+                                Tìm
+                            </button>
+                        </div>
+                    </form>
+
+                    {{-- 2. Nút Bộ lọc (Chiều cao h-11) --}}
                     <button id="toggle-tree-btn"
-                        class="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-xl font-medium hover:bg-slate-50 transition shadow-sm">
-                        <i class="fa-solid fa-magnifying-glass text-blue-500"></i>
-                        <span id="toggle-btn-text">Hiện bộ lọc chuyên đề</span>
+                        class="h-11 flex items-center gap-2 px-4 bg-white border border-slate-300 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-50 transition shadow-sm whitespace-nowrap">
+                        <i class="fa-solid fa-filter text-blue-500"></i>
+                        <span>Bộ lọc chuyên đề</span>
                     </button>
 
+                    {{-- 3. Nút Thêm mới (Chiều cao h-11) --}}
                     <a href="{{ route('questions.create') }}"
-                        class="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition shadow-lg shadow-blue-200">
-                        <i class="fa-solid fa-plus"></i> Thêm câu hỏi
+                        class="h-11 flex items-center gap-2 px-5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-200 whitespace-nowrap">
+                        <i class="fa-solid fa-plus"></i> Thêm mới
                     </a>
+
                 </div>
             @endif
         </div>
@@ -175,7 +204,7 @@
                                                 <i class="fa-solid fa-pen-to-square"></i>
                                             </a>
 
-                                            <form action="#" method="POST" class="inline-block"
+                                            <form action="{{ route('questions.destroy', $question->id) }}" method="POST" class="inline-block"
                                                 onsubmit="return confirm('Bạn có chắc chắn muốn xóa câu hỏi này?');">
                                                 @csrf
                                                 @method('DELETE')

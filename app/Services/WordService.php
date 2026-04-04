@@ -27,25 +27,26 @@ class WordService
         //$html = str_replace(asset('storage'), public_path('storage'), $html);
         $html = make_image_paths_local($html);
 
+        // MỚI THÊM: Xóa thẻ <p> trong bảng để Pandoc không bị vỡ table
+        $html = clean_p_tags_in_tables($html);
+
         // Lưu file HTML tạm
         File::put($htmlFile, $html);
 
-        // 4. Chạy lệnh Pandoc để xuất Word
-        // --from html+... : Nhận diện công thức toán
-        // --standalone : Tạo một file Word hoàn chỉnh có cấu trúc chuẩn
-        // $command = 'pandoc '.escapeshellarg($htmlFile).
-        //    ' -o '.escapeshellarg($wordFile).
-        //    ' --from html+tex_math_dollars+tex_math_single_backslash '.
-        //    ' --standalone';
+        // Đường dẫn tuyệt đối tới file template Word của bạn
+        $templatePath = storage_path('app/pandoc/custom-reference.docx');
 
+        // KIỂM TRA TRƯỚC XEM FILE TEMPLATE CÓ TỒN TẠI KHÔNG
+        if (!File::exists($templatePath)) {
+            throw new \Exception('Lỗi: Không tìm thấy file template tại đường dẫn: ' . $templatePath);
+        }
+
+        // Lệnh Pandoc mới
         $command = 'pandoc '.escapeshellarg($htmlFile).
          ' -o '.escapeshellarg($wordFile).
          ' --from html+tex_math_dollars+tex_math_single_backslash '.
          ' --standalone '.
-         ' -V mainfont="Times New Roman" '.
-         ' -V fontsize=12pt '.
-         ' -V papersize=a4 '.
-         ' -V geometry:margin=2cm';
+         ' --reference-doc='.escapeshellarg($templatePath);
 
         shell_exec($command);
 

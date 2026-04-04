@@ -75,6 +75,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/questions/essay/{id}/show', [EssayController::class, 'show'])->name('questions.es.show');
         Route::get('/questions/essay/{id}/edit', [EssayController::class, 'edit'])->name('questions.es.edit');
         Route::put('/questions/essay/{id}/update', [EssayController::class, 'update'])->name('questions.es.update');
+        Route::get('/questions/essay/{id}/printpdf', [EssayController::class, 'printPdf'])->name('questions.es.printpdf');
 
         // Route cho tính năng in (NÊN ĐẶT TRƯỚC CÁC ROUTE SHOW/EDIT NẾU CÙNG PREFIX)
         Route::get('/questions/essay/{id}/print-preview', [EssayController::class, 'printPdf'])->name('questions.es.printPdf');
@@ -100,6 +101,6 @@ Route::middleware('auth')->group(function () {
          Route::post('/shared-contexts/create', [SharedContextController::class, 'store'])->name('shared_contexts.store');
          Route::put('/shared-contexts/{id}', [SharedContextController::class, 'update'])->name('shared_contexts.update');
         // Resource chính
-        Route::resource('questions', QuestionController::class)->only(['index', 'create', 'show','edit','update'])->parameters(['questions' => 'question']);
+        Route::resource('questions', QuestionController::class)->only(['index', 'create', 'show','edit','update','destroy'])->parameters(['questions' => 'question']);
     });
 });

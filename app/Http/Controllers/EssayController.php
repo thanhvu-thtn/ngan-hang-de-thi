@@ -65,12 +65,12 @@ class EssayController extends Controller
         $finalData = array_merge($setupData, $essayData);
 
         // 4. Nhờ Handler lưu toàn bộ vào DB
-        $this->handler->store($finalData);
+        $question=$this->handler->store($finalData);
 
         // 5. Quét dọn Session cho sạch sẽ
         session()->forget('question_setup');
 
-        return redirect()->route('questions.index')
+        return redirect()->route('questions.es.edit', $question->id)
             ->with('success', 'Đã lưu câu hỏi Tự luận thành công!');
     }
 
@@ -138,8 +138,54 @@ class EssayController extends Controller
 
     // Hàm update - Nhận dữ liệu từ form edit và cập nhật vào DB
     public function update(Request $request, $id)
-    {        // 1. Tìm câu hỏi cần cập nhật
-        
+    {
+        // 1. Validate dữ liệu gửi lên
+        $request->validate([
+            'stem' => 'required|string',
+            'explanation' => 'nullable|string',
+            'status' => 'nullable|integer|in:0,1,2',
+        ], [
+            'stem.required' => 'Bạn chưa nhập nội dung đề bài.',
+        ]);
+        // 1. Lấy dữ liệu từ request
+        $stemContent = $request->input('stem');
+        $explanationContent = $request->input('explanation');
+
+        // 2. Tắm rửa dữ liệu ảnh (Kéo hình mới về server nếu có)
+        $stemContent = $this->imageService->localizeImages($stemContent ?? '');
+        $explanationContent = $this->imageService->localizeImages($explanationContent ?? '');
+
+        // 2. Tìm câu hỏi
+        $question = Question::findOrFail($id);
+
+        // 3. Cập nhật dữ liệu chính (stem)
+        $question->stem = $stemContent;
+
+        // 4. KIỂM TRA QUYỀN: Chỉ lưu status nếu có quyền 'tham-dinh-cau-hoi'
+        // Dùng auth()->user()->can() hoặc Gate::allows() đều được
+        if ($request->user()->can('tham-dinh-cau-hoi')) {
+            $question->status = $request->input('status', $question->status);
+        }
+
+        // Lưu bảng questions
+        $question->save();
+
+        // 5. Cập nhật bảng con (question_explanations)
+        // Dùng updateOrCreate: Tìm theo question_id, nếu có thì update content, chưa có thì tạo mới
+        if ($request->filled('explanation')) {
+            $question->explanation()->updateOrCreate(
+                ['question_id' => $question->id],
+                ['content' => $explanationContent]
+            );
+        } else {
+            // Nếu người dùng xóa trống ô lời giải, ta cập nhật thành null
+            $question->explanation()->delete();
+
+        }
+
+        // 6. Trả về thông báo thành công
+        // Bạn có thể redirect về lại trang edit hiện tại, hoặc redirect về trang danh sách câu hỏi tùy ý
+        return redirect()->route('questions.es.edit', $question->id)->with('success', 'Cập nhật câu hỏi Tự luận thành công!');
     }
 
     /**
@@ -147,30 +193,49 @@ class EssayController extends Controller
      */
     public function printPdf($id, PdfService $pdfService)
     {
-        // 1. LẤY DỮ LIỆU TỪ KHO
-        // Dùng with() để Eager Load bảng explanation (lời giải) phòng trường hợp in bị lỗi N+1
-        $question = Question::with('explanation')->findOrFail($id);
+        // 1. Lấy câu hỏi và load kèm lời giải (tránh lỗi N+1)
+        $question = Question::findOrFail($id);
+        $question->load([
+            'questionType',
+            'cognitiveLevel',
+            'layout',
+            'choices',
+            'statistic',
+            'objectives',
+            'explanation',
+            'checker',
+        ]);
 
-        // 2. LẮP RÁP VÀO KHUÔN (Render HTML)
-        // Gọi view printpdf mà chúng ta vừa làm, truyền data vào và dùng hàm render() để biến thành chuỗi HTML
-        $html = view('questions.essay.printpdf', compact('question'))->render();
+        // 2. Render view thành một chuỗi HTML dạng string
+        // Thay vì trả về view thẳng cho người dùng, ta lưu nó vào biến $html
+        $html = view('questions.essay.partials.pdf_template', compact('question'))->render();
 
-        // dd($html); // TEST: Xem chuỗi HTML đã được render có đúng ý không trước khi đưa cho PDF Service
-        // 3. GIAO CHO MÁY IN
-        // Chuyển ../storage thành http://localhost:8000/storage
-        $html = str_replace('../storage', asset('storage'), $html);
+        // 2. Dùng DOMDocument để "dọn dẹp" và hoàn thiện các tag HTML
+        $dom = new \DOMDocument;
 
-        // Chuyền cục HTML đó cho Service để nó chạy Browsershot tạo PDF
-        $pdfContent = $pdfService->generateFromHtml($html);
+        // Bỏ qua các cảnh báo lỗi HTML vặt vãnh
+        libxml_use_internal_errors(true);
 
-        // dd($pdfContent); // TEST: Xem dữ liệu nhị phân của PDF có được trả về không (nếu thấy là chuỗi ký tự lộn xộn thì đã thành công)
+        // Load chuỗi HTML vào (phải convert sang HTML-ENTITIES để không bị lỗi font tiếng Việt)
+        $dom->loadHTML(mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8'));
 
-        // 4. TRẢ HÀNG CHO KHÁCH (MỞ TRÊN TAB MỚI)
-        // Trả về file PDF cho trình duyệt tải xuống
-        return response()->streamDownload(function () use ($pdfContent) {
-            echo $pdfContent;
-        }, 'cau-hoi-'.$id.'.pdf', [
+        // Xóa bộ nhớ đệm lỗi
+        libxml_clear_errors();
+
+        // Lấy chuỗi HTML đã được tự động sửa lỗi và đóng tag
+        $cleanHtml = $dom->saveHTML();
+        //return ($cleanHtml);
+        // 3. Sử dụng PdfService để tạo nội dung file PDF từ chuỗi HTML
+        $pdfContent = $pdfService->generateFromHtml($cleanHtml);
+
+        // 4. Trả file PDF về cho trình duyệt
+        $fileName = 'cau_hoi_tu_luan_'.$question->id.'.pdf';
+
+        return response($pdfContent, 200, [
             'Content-Type' => 'application/pdf',
+            // Dùng 'inline' để mở tab mới xem PDF.
+            // Nếu muốn tải thẳng về máy, thay chữ 'inline' thành 'attachment'
+            'Content-Disposition' => 'inline; filename="'.$fileName.'"',
         ]);
     }
 

@@ -4,10 +4,11 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
+use Spatie\Browsershot\Browsershot;
 
 class PdfService
 {
-    public function generateFromHtml(string $html)
+    /* public function generateFromHtml(string $html)
     {
         // 1. Tạo thư mục tạm nếu chưa có
         $tempDir = storage_path('app/temp_pdf');
@@ -60,5 +61,16 @@ class PdfService
         }
 
         throw new \Exception('Pandoc không thể tạo được file PDF. Kiểm tra lại nội dung HTML hoặc cấu hình xelatex.');
+    } */
+
+    public function generateFromHtml(string $html)
+    {
+        return Browsershot::html($html)
+            ->format('A4')
+            ->margins(20, 20, 20, 20)
+            ->showBackground()
+            // BỎ LỆNH waitUntilNetworkIdle() ĐỂ TRÁNH TREO
+            ->delay(1500) // Nghỉ 1.5 giây để KaTeX vẽ công thức xong
+            ->pdf();
     }
 }
