@@ -13,6 +13,7 @@ class Objective extends Model
         'content_id',
         'description',
         'order',
+        'tag_name'
     ];
 
     /**

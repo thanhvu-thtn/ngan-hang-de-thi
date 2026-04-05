@@ -41,6 +41,7 @@ class ObjectiveController extends Controller
         $request->validate([
             'description' => 'required',
             'content_id' => 'required|exists:contents,id',
+            'tag_name' => 'required|unique:objectives,tag_name'
         ]);
 
         Objective::create($request->all());
@@ -62,6 +63,7 @@ class ObjectiveController extends Controller
     {
         $request->validate([
             'description' => 'required',
+            'tag_name' => 'required|unique:objectives,tag_name,' . $objective->id
         ]);
 
         $objective->update($request->all());

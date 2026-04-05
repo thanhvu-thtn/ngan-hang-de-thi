@@ -52,6 +52,7 @@ Route::middleware('auth')->group(function () {
 
     // --- TỔ TRƯỞNG & ADMIN ---
     Route::middleware('role:Admin|Tổ trưởng')->group(function () {
+        Route::get('/topics/export', [TopicController::class, 'exportWord'])->name('topics.export');
         Route::resource('topics', TopicController::class);
         Route::resource('contents', ContentController::class);
         Route::resource('objectives', ObjectiveController::class);

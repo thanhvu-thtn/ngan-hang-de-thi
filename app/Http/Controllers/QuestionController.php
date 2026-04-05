@@ -121,6 +121,8 @@ class QuestionController extends Controller
             $questions = $query->paginate(15);
             $questions->appends($request->query());
         }
+        // LƯU LẠI ĐƯỜNG DẪN HIỆN TẠI (BAO GỒM CẢ QUERY LỌC VÀ PHÂN TRANG) VÀO SESSION
+        session()->put('question_index_url', request()->fullUrl());
 
         // 4. Truyền thêm biến $isFiltering sang view
         return view('questions.index', compact('hasNoAssignedTopics', 'treeByGrade', 'questions', 'isFiltering'));

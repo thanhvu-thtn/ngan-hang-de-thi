@@ -181,4 +181,61 @@ class TopicController extends Controller
         return redirect()->route('topics.index')
             ->with('success', 'Đã xóa chuyên đề thành công!');
     }
+
+    public function exportWord(Request $request, \App\Services\WordService $wordService)
+    {
+        // 1. Kiểm tra phải chọn đủ 3 bộ lọc cấu trúc
+        if (!$request->filled(['subject_id', 'grade', 'topic_type_id'])) {
+            return redirect()->back()->with('error', 'Bạn phải chọn đầy đủ Môn học, Khối lớp và Loại chuyên đề mới được xuất Word!');
+        }
+
+        $subjectId = $request->input('subject_id');
+        $grade = $request->input('grade');
+        $topicTypeId = $request->input('topic_type_id');
+
+        // Phân quyền: Nếu không phải Admin thì ép môn học phải là môn của giáo viên đó
+        $user = auth()->user();
+        if (!$user->hasRole('Admin') && $subjectId != $user->subject_id) {
+            abort(403, 'Bạn không có quyền xuất dữ liệu của môn học khác!');
+        }
+
+        // Lấy thông tin Môn và Loại để làm tiêu đề file
+        $subject = Subject::findOrFail($subjectId);
+        $topicType = TopicType::findOrFail($topicTypeId);
+
+        // 2. Truy vấn dữ liệu: Lấy Chuyên đề -> load Nội dung -> load Yêu cầu cần đạt
+        $topics = Topic::with(['contents.objectives'])
+            ->where('subject_id', $subjectId)
+            ->where('grade', $grade)
+            ->where('topic_type_id', $topicTypeId)
+            ->orderBy('order')
+            ->orderBy('id')
+            ->get();
+
+        if ($topics->isEmpty()) {
+            return redirect()->back()->with('error', 'Không có dữ liệu nào phù hợp với bộ lọc để xuất Word!');
+        }
+
+        // 3. Render ra chuỗi HTML từ Blade
+        $html = view('topics.export_word', compact('topics', 'subject', 'grade', 'topicType'))->render();
+
+        try {
+            // 4. Đẩy qua WordService
+            // Tùy thuộc vào việc WordService của bạn trả về Đường dẫn file hay Nội dung file (binary).
+            // Dựa theo file WordService.php của bạn, hàm này đọc File::get() rồi xóa file vật lý -> Tức là trả về nội dung text nhị phân.
+            $wordContent = $wordService->generateFromHtml($html);
+            
+            // Tạo tên file an toàn
+            $fileName = "Danh_sach_YCCD_{$subject->name}_Khoi_{$grade}.docx";
+            $fileName = str_replace(' ', '_', $fileName);
+
+            // 5. Trả file về cho trình duyệt tải xuống
+            return response($wordContent)
+                ->header('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+                ->header('Content-Disposition', 'attachment; filename="' . $fileName . '"');
+
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Có lỗi xảy ra khi xuất Word: ' . $e->getMessage());
+        }
+    }
 }

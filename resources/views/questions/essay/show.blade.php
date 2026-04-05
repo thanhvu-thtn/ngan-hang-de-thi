@@ -5,11 +5,11 @@
 
         {{-- THANH ĐIỀU HƯỚNG TRÊN CÙNG --}}
         <div class="flex items-center justify-between mb-6">
-            <a href="{{ route('questions.index') }}"
+            <a href="{{ session('question_index_url', route('questions.index')) }}"
                 class="flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-xl font-medium hover:bg-slate-50 transition shadow-sm">
                 <i class="fa-solid fa-arrow-left"></i> Quay về
             </a>
-            <a href="#"
+            <a href="{{ route('questions.es.edit', $question->id) }}"
                 class="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl font-medium hover:bg-amber-600 transition shadow-sm">
                 <i class="fa-solid fa-pen-to-square"></i> Chỉnh sửa
             </a>

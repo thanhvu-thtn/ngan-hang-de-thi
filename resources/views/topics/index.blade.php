@@ -10,10 +10,20 @@
                     Chuyên đề</h2>
                 <p class="text-slate-500 text-sm mt-1">Danh sách chuyên đề theo môn học và khối lớp</p>
             </div>
-            <a href="{{ route('topics.create', array_merge(request()->only(['subject_id', 'topic_type_id', 'grade']), ['back_url' => urlencode(request()->fullUrl())])) }}"
-                class="px-4 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm flex items-center gap-2 transition">
-                <i class="fa-solid fa-plus"></i> Thêm chuyên đề
-            </a>
+
+            {{-- Đã thay đổi gap-3 thành gap-2 để 2 nút nằm sát nhau hơn --}}
+            <div class="flex items-center gap-2">
+                {{-- Nút Xuất ra Word --}}
+                <a href="{{ route('topics.export', request()->only(['subject_id', 'grade', 'topic_type_id'])) }}"
+                    class="px-4 py-2.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 shadow-sm flex items-center gap-2 transition">
+                    <i class="fa-solid fa-file-word"></i> Xuất Word
+                </a>
+
+                <a href="{{ route('topics.create', array_merge(request()->only(['subject_id', 'topic_type_id', 'grade']), ['back_url' => urlencode(request()->fullUrl())])) }}"
+                    class="px-4 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm flex items-center gap-2 transition">
+                    <i class="fa-solid fa-plus"></i> Thêm chuyên đề
+                </a>
+            </div>
         </div>
 
         <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 mb-6">
