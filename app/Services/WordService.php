@@ -62,4 +62,49 @@ class WordService
 
         throw new \Exception('Pandoc không thể tạo được file Word. Kiểm tra lại nội dung HTML hoặc cài đặt Pandoc.');
     }
+
+    /**
+     * Dịch file Word (.docx) sang HTML, trích xuất ảnh và công thức Toán
+     */
+    public function convertWordToHtml(string $filePath)
+    {
+        // 1. Cấu hình thư mục chứa ảnh (nằm trong public để trình duyệt đọc được)
+        $mediaDir = storage_path('app/public/temp_media');
+        if (!File::exists($mediaDir)) {
+            File::makeDirectory($mediaDir, 0755, true);
+        }
+
+        // File HTML tạm thời
+        $htmlFile = storage_path('app/temp_word/' . Str::random(10) . '.html');
+
+        // 2. Lệnh Pandoc:
+        // -t html: Xuất ra định dạng HTML
+        // --extract-media: Tự động bóc tách ảnh trong Word lưu vào thư mục temp_media
+        // --mathjax: Chuyển công thức MathType/Equation thành chuẩn MathJax ($$ ... $$)
+        $command = 'pandoc ' . escapeshellarg($filePath) .
+                   ' -t html ' .
+                   ' --extract-media=' . escapeshellarg($mediaDir) .
+                   ' --mathjax ' .
+                   ' -o ' . escapeshellarg($htmlFile);
+
+        shell_exec($command);
+
+        if (!File::exists($htmlFile)) {
+            throw new \Exception('Pandoc không thể xử lý file Word này. Vui lòng kiểm tra lại định dạng file.');
+        }
+
+        // 3. Đọc nội dung HTML
+        $html = File::get($htmlFile);
+        File::delete($htmlFile); // Đọc xong thì xoá luôn file HTML tạm
+
+        // 4. Sửa lại đường dẫn ảnh cho đúng URL trên Web
+        // Pandoc sẽ nhúng đường dẫn vật lý vào HTML (VD: storage/app/public/temp_media/media/image1.png)
+        // Ta cần đổi nó thành đường dẫn Web (VD: /storage/temp_media/media/image1.png)
+        // Lưu ý dùng DIRECTORY_SEPARATOR để code chạy đúng trên cả Mac, Linux, Windows
+        $physicalPath = 'storage' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . 'temp_media';
+        $webPath = '/storage/temp_media';
+        $html = str_replace($physicalPath, $webPath, $html);
+
+        return $html;
+    }
 }

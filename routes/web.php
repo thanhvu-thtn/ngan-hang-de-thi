@@ -12,15 +12,15 @@ use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\QuestionLayoutController;
 use App\Http\Controllers\QuestionTypeController;
+use App\Http\Controllers\SharedContextController;
 use App\Http\Controllers\ShortAnswerController;
 use App\Http\Controllers\SubjectController;
 use App\Http\Controllers\TopicAssignmentController;
-use App\Http\Controllers\TopicController;
-use App\Http\Controllers\TopicTypeController; // Đã thêm
+use App\Http\Controllers\TopicController; // Đã thêm
+use App\Http\Controllers\TopicTypeController;
 use App\Http\Controllers\TrueFalseController;
 use App\Http\Controllers\UploadController;
-use App\Http\Controllers\UserController;
-use App\Http\Controllers\SharedContextController; // Đã thêm
+use App\Http\Controllers\UserController; // Đã thêm
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -66,42 +66,82 @@ Route::middleware('auth')->group(function () {
 
     // --- NGÂN HÀNG CÂU HỎI ---
     Route::middleware(['role_or_permission:Admin|Tổ trưởng|bien-soan-cau-hoi'])->group(function () {
-        // Bước 1: Setup
-        Route::post('/questions/setup', [QuestionController::class, 'storeSetup'])->name('questions.storeSetup');
-        //Route::post('/questions/update', [QuestionController::class, 'storeSetup'])->name('questions.update');
 
-        // Bước 2: Essay (Tự luận)
-        Route::get('/questions/essay/create', [EssayController::class, 'create'])->name('questions.es.create');
-        Route::post('/questions/essay', [EssayController::class, 'store'])->name('questions.es.store');
-        Route::get('/questions/essay/{id}/show', [EssayController::class, 'show'])->name('questions.es.show');
-        Route::get('/questions/essay/{id}/edit', [EssayController::class, 'edit'])->name('questions.es.edit');
-        Route::put('/questions/essay/{id}/update', [EssayController::class, 'update'])->name('questions.es.update');
-        Route::get('/questions/essay/{id}/printpdf', [EssayController::class, 'printPdf'])->name('questions.es.printpdf');
+        // =========================================================================
+        // 1. NHÓM UPLOAD (YÊU CẦU PHẢI CÓ THÊM QUYỀN UPLOAD-CAU-HOI)
+        // =========================================================================
+        Route::middleware(['role_or_permission:upload-cau-hoi'])
+            ->prefix('questions/upload')
+            ->group(function () {
+                // Giữ nguyên name() rỗng cho route gốc để khớp tên 'questions.upload' của bạn
+                Route::get('/', [QuestionController::class, 'showUploadForm'])->name('questions.upload');
+                Route::post('/preview', [QuestionController::class, 'previewUpload'])->name('questions.upload.preview');
+                Route::post('/import', [QuestionController::class, 'importData'])->name('questions.upload.import');
+            });
 
-        // Route cho tính năng in (NÊN ĐẶT TRƯỚC CÁC ROUTE SHOW/EDIT NẾU CÙNG PREFIX)
-        Route::get('/questions/essay/{id}/print-preview', [EssayController::class, 'printPdf'])->name('questions.es.printPdf');
-        Route::get('/questions/essay/{id}/print-word', [EssayController::class, 'printWord'])->name('questions.es.printWord'); 
-        // Resource của MultipleChoiceController
-        Route::get('/questions/multiple-choice/create', [MultipleChoiceController::class, 'create'])->name('questions.mc.create');
-        Route::post('/questions/multiple-choice', [MultipleChoiceController::class, 'store'])->name('questions.mc.store');
-        Route::get('/questions/multiple-choice/{id}/show', [MultipleChoiceController::class, 'show'])->name('questions.mc.show');
-        Route::get('/questions/multiple-choice/{id}/edit', [MultipleChoiceController::class, 'edit'])->name('questions.mc.edit');
-        // Resource của ShortAnswerController
-        Route::get('/questions/short-answer/create', [ShortAnswerController::class, 'create'])->name('questions.sa.create');
-        Route::post('/questions/short-answer', [ShortAnswerController::class, 'store'])->name('questions.sa.store');
-        Route::get('/questions/short-answer/{id}/show', [ShortAnswerController::class, 'show'])->name('questions.sa.show');
-        Route::get('/questions/short-answer/{id}/edit', [ShortAnswerController::class, 'edit'])->name('questions.sa.edit');
-        // Resource của TrueFalseController (nếu có)
-        Route::get('/questions/true-false/create', [TrueFalseController::class, 'create'])->name('questions.tf.create');
-        Route::post('/questions/true-false', [TrueFalseController::class, 'store'])->name('questions.tf.store');
-        Route::get('/questions/true-false/{id}/show', [TrueFalseController::class, 'show'])->name('questions.tf.show');
-        Route::get('/questions/true-false/{id}/edit', [TrueFalseController::class, 'edit'])->name('questions.tf.edit');
-        // Route của SharedContextController
-         Route::get('/shared-contexts/{id}/show', [SharedContextController::class, 'show'])->name('shared_contexts.show');
-         Route::get('/shared-contexts/{id}/edit', [SharedContextController::class, 'edit'])->name('shared_contexts.edit');
-         Route::post('/shared-contexts/create', [SharedContextController::class, 'store'])->name('shared_contexts.store');
-         Route::put('/shared-contexts/{id}', [SharedContextController::class, 'update'])->name('shared_contexts.update');
-        // Resource chính
-        Route::resource('questions', QuestionController::class)->only(['index', 'create', 'show','edit','update','destroy'])->parameters(['questions' => 'question']);
+        // =========================================================================
+        // 2. NHÓM CÁC TÍNH NĂNG QUESTION (Sử dụng chung prefix 'questions' và name 'questions.')
+        // =========================================================================
+        Route::prefix('questions')->name('questions.')->group(function () {
+
+            // Bước 1: Setup
+            Route::post('setup', [QuestionController::class, 'storeSetup'])->name('storeSetup');
+
+            // Bước 2: Essay (Tự luận)
+            Route::prefix('essay')->name('es.')->group(function () {
+                Route::get('create', [EssayController::class, 'create'])->name('create');
+                Route::post('/', [EssayController::class, 'store'])->name('store');
+
+                // Các route liên quan đến in ấn (Đặt trước các route có chứa {id} để không bị trùng lặp pattern)
+                Route::get('{id}/printpdf', [EssayController::class, 'printPdf'])->name('printpdf');
+                Route::get('{id}/print-preview', [EssayController::class, 'printPdf'])->name('printPdf');
+                Route::get('{id}/print-word', [EssayController::class, 'printWord'])->name('printWord');
+
+                Route::get('{id}/show', [EssayController::class, 'show'])->name('show');
+                Route::get('{id}/edit', [EssayController::class, 'edit'])->name('edit');
+                Route::put('{id}/update', [EssayController::class, 'update'])->name('update');
+            });
+
+            // Multiple Choice (Trắc nghiệm nhiều lựa chọn)
+            Route::prefix('multiple-choice')->name('mc.')->group(function () {
+                Route::get('create', [MultipleChoiceController::class, 'create'])->name('create');
+                Route::post('/', [MultipleChoiceController::class, 'store'])->name('store');
+                Route::get('{id}/show', [MultipleChoiceController::class, 'show'])->name('show');
+                Route::get('{id}/edit', [MultipleChoiceController::class, 'edit'])->name('edit');
+            });
+
+            // Short Answer (Trắc nghiệm trả lời ngắn)
+            Route::prefix('short-answer')->name('sa.')->group(function () {
+                Route::get('create', [ShortAnswerController::class, 'create'])->name('create');
+                Route::post('/', [ShortAnswerController::class, 'store'])->name('store');
+                Route::get('{id}/show', [ShortAnswerController::class, 'show'])->name('show');
+                Route::get('{id}/edit', [ShortAnswerController::class, 'edit'])->name('edit');
+            });
+
+            // True False (Trắc nghiệm đúng sai)
+            Route::prefix('true-false')->name('tf.')->group(function () {
+                Route::get('create', [TrueFalseController::class, 'create'])->name('create');
+                Route::post('/', [TrueFalseController::class, 'store'])->name('store');
+                Route::get('{id}/show', [TrueFalseController::class, 'show'])->name('show');
+                Route::get('{id}/edit', [TrueFalseController::class, 'edit'])->name('edit');
+            });
+        });
+
+        // =========================================================================
+        // 3. NHÓM SHARED CONTEXT (Đoạn thông tin dùng chung)
+        // =========================================================================
+        Route::prefix('shared-contexts')->name('shared_contexts.')->group(function () {
+            Route::post('create', [SharedContextController::class, 'store'])->name('store');
+            Route::get('{id}/show', [SharedContextController::class, 'show'])->name('show');
+            Route::get('{id}/edit', [SharedContextController::class, 'edit'])->name('edit');
+            Route::put('{id}', [SharedContextController::class, 'update'])->name('update');
+        });
+
+        // =========================================================================
+        // 4. RESOURCE CHÍNH QUẢN LÝ CÂU HỎI
+        // =========================================================================
+        Route::resource('questions', QuestionController::class)
+            ->only(['index', 'create', 'show', 'edit', 'update', 'destroy'])
+            ->parameters(['questions' => 'question']);
     });
 });

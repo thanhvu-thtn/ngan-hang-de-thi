@@ -70,7 +70,7 @@
             </li>
             {{-- Mục Upload câu hỏi: Yêu cầu ĐỒNG THỜI quyền biên soạn (từ group cha) và quyền upload --}}
             @can('upload-cau-hoi')
-                <li><a href="#"
+                <li><a href="{{ route('questions.upload') }}"
                         class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i
                             class="fa-solid fa-cloud-arrow-up w-5 text-center mr-2 text-slate-400"></i> Upload câu hỏi</a>
                 </li>

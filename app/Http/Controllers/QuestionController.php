@@ -14,6 +14,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
+use App\Services\WordService;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
+
 class QuestionController extends Controller
 {
     /**
@@ -329,6 +333,154 @@ class QuestionController extends Controller
                 ->with('error', 'Có lỗi xảy ra khi xóa câu hỏi: '.$e->getMessage());
         }
     }
+
+    // Hiển thị form upload file Word để tạo hàng loạt câu hỏi
+    public function showUploadForm()
+    {
+        return view('questions.upload');
+    }
+
+    public function previewUpload(Request $request, WordService $wordService)
+    {
+        $request->validate([
+            'word_file' => 'required|file|mimes:docx|max:10240', // Tối đa 10MB
+        ]);
+
+        $file = $request->file('word_file');
+
+        // 1. Lưu file Word người dùng tải lên vào thư mục tạm
+        $tempDir = storage_path('app/temp_word');
+        if (! File::exists($tempDir)) {
+            File::makeDirectory($tempDir, 0755, true);
+        }
+
+        $fileName = Str::random(10).'.docx';
+        $file->move($tempDir, $fileName);
+        $fullPath = $tempDir.'/'.$fileName;
+
+        try {
+            // 2. Gọi WordService dịch toàn bộ ra HTML
+            $html = $wordService->convertWordToHtml($fullPath);
+
+            // 3. Chạy hàm bóc tách HTML thành mảng các câu hỏi (Magic nằm ở đây)
+            $questions = $this->parseHtmlToQuestions($html);
+            dd($html);
+            // 4. Dọn rác file Word
+            File::delete($fullPath);
+
+            // MỚI: Tạo ID phiên làm việc và lưu mảng câu hỏi vào Cache (Tồn tại trong 2 giờ)
+            $batchId = (string) Str::uuid();
+            cache()->put('upload_batch_' . $batchId, $questions, now()->addHours(2));
+
+            // Trả về giao diện Preview
+            return view('questions.preview', compact('questions', 'batchId'));
+
+            // (Sau này ta sẽ return view('questions.preview') ở đây)
+
+        } catch (\Exception $e) {
+            if (File::exists($fullPath)) {
+                File::delete($fullPath);
+            }
+
+            return back()->with('error', 'Lỗi xử lý file: '.$e->getMessage());
+        }
+    }
+
+    /**
+     * Hàm bóc tách HTML thành mảng câu hỏi dựa trên các Tag
+     */
+    private function parseHtmlToQuestions($html)
+    {
+        // Bước 1: Thay thế các thẻ Begin, End,... bị bọc bởi HTML (ví dụ <p><strong>Begin,</strong></p>)
+        // thành các mốc cố định [[BEGIN]], [[END]] để dễ dàng cắt chuỗi.
+        $html = preg_replace('/(?:<p[^>]*>)?\s*(?:<strong>|<b>)?Begin,(?:<\/strong>|<\/b>)?\s*(?:<\/p>)?/i', '[[BEGIN]]', $html);
+        $html = preg_replace('/(?:<p[^>]*>)?\s*(?:<strong>|<b>)?End,(?:<\/strong>|<\/b>)?\s*(?:<\/p>)?/i', '[[END]]', $html);
+
+        // Đánh dấu luôn các từ khóa cấu trúc (Chỉ đánh dấu khi nó nằm ở đầu dòng/đầu thẻ <p>)
+        $keywords = ['Type,', 'Tag,', 'Name,', 'Objective,', 'Stem,', 'Explanation,'];
+        foreach ($keywords as $kw) {
+            $marker = '[['.trim($kw, ',').']]';
+            $html = preg_replace('/(?:<p[^>]*>)?\s*(?:<strong>|<b>)?'.preg_quote($kw).'(?:<\/strong>|<\/b>)?/i', $marker, $html);
+        }
+
+        $questions = [];
+
+        // Bước 2: Tách lấy các block nằm giữa [[BEGIN]] và [[END]]
+        $blocks = explode('[[BEGIN]]', $html);
+        array_shift($blocks); // Bỏ đi phần chữ giới thiệu trước chữ Begin đầu tiên (nếu có)
+
+        foreach ($blocks as $block) {
+            // Cắt bỏ phần dư thừa sau chữ End,
+            $parts = explode('[[END]]', $block);
+            if (count($parts) < 2) {
+                continue;
+            } // Nếu không có End, thì bỏ qua block này (lỗi cú pháp)
+            $content = $parts[0];
+
+            // Bước 3: Rút trích dữ liệu vào mảng
+            // Dùng thủ thuật cắt chuỗi dựa vào các Marker ta đã đánh dấu
+            $item = [
+                'type' => $this->extractStringValue('TYPE', 'TAG', $content),
+                'tag' => $this->extractStringValue('TAG', 'NAME', $content),
+                'name' => $this->extractStringValue('NAME', 'OBJECTIVE', $content),
+                'objective' => $this->extractStringValue('OBJECTIVE', 'STEM', $content),
+                'stem' => $this->extractHtmlValue('STEM', 'EXPLANATION', $content),
+                'explanation' => $this->extractHtmlValue('EXPLANATION', null, $content),
+            ];
+
+            $questions[] = $item;
+        }
+
+        return $questions;
+    }
+
+    /**
+     * Hàm phụ trợ: Rút trích giá trị dạng Text thường (xoá sạch HTML)
+     */
+    private function extractStringValue($startMarker, $endMarker, $content)
+    {
+        $startPos = strpos($content, '[['.$startMarker.']]');
+        if ($startPos === false) {
+            return '';
+        }
+        $startPos += strlen('[['.$startMarker.']]');
+
+        $endPos = $endMarker ? strpos($content, '[['.$endMarker.']]', $startPos) : strlen($content);
+        if ($endPos === false) {
+            $endPos = strlen($content);
+        }
+
+        $text = substr($content, $startPos, $endPos - $startPos);
+
+        // Xoá HTML và khoảng trắng thừa, xoá luôn thẻ </p> dư
+        return trim(strip_tags(str_replace('</p>', '', $text)));
+    }
+
+    /**
+     * Hàm phụ trợ: Rút trích giá trị dạng HTML (Giữ nguyên công thức Toán và Ảnh)
+     */
+    private function extractHtmlValue($startMarker, $endMarker, $content)
+    {
+        $startPos = strpos($content, '[['.$startMarker.']]');
+        if ($startPos === false) {
+            return '';
+        }
+        $startPos += strlen('[['.$startMarker.']]');
+
+        $endPos = $endMarker ? strpos($content, '[['.$endMarker.']]', $startPos) : strlen($content);
+        if ($endPos === false) {
+            $endPos = strlen($content);
+        }
+
+        $html = substr($content, $startPos, $endPos - $startPos);
+
+        // Xoá chữ </p> rác có thể dính lại do Pandoc render
+        $html = preg_replace('/^<\/p>/i', '', trim($html));
+
+        return trim($html);
+    }
+
+    public function importData() {}
 
     // ==========================================
     // CÁC HÀM HELPER DÙNG CHUNG TRONG CLASS
