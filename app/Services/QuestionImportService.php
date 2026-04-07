@@ -2,144 +2,288 @@
 
 namespace App\Services;
 
+use App\QuestionHandlers\EssayHandler;
+use App\QuestionHandlers\MultipleChoiceHandler;
+use App\QuestionHandlers\ShortAnswerHandler;
+use App\QuestionHandlers\TrueFalseHandler;
+
+use App\Models\User;
 use Exception;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Log;
-use Symfony\Component\Process\Process;
-use Symfony\Component\Process\Exception\ProcessFailedException;
-use App\QuestionHandlers\QuestionHandlerFactory;
 
 class QuestionImportService
 {
-    /**
-     * Hàm chính để xử lý file Word tải lên.
-     *
-     * @param UploadedFile $file File Word (.docx)
-     * @param array $commonData Dữ liệu dùng chung (VD: topic_id, cognitive_level_id...)
-     * @return array Kết quả import (số câu thành công, danh sách lỗi)
-     */
-    public function importFromDocx(UploadedFile $file, array $commonData = []): array
+    protected $permissionService;
+
+    public function __construct(ObjectivePermissionService $permissionService)
     {
-        $importedCount = 0;
-        $errors = [];
+        $this->permissionService = $permissionService;
+    }
 
-        // 1. Tạo thư mục tạm thời để xử lý file
-        $tempDir = 'imports/temp_' . time();
-        Storage::disk('local')->makeDirectory($tempDir);
 
-        try {
-            // Lưu file gốc vào thư mục tạm
-            $filePath = $file->storeAs($tempDir, 'upload.docx', 'local');
-            $fullFilePath = Storage::disk('local')->path($filePath);
-            $outputHtmlPath = Storage::disk('local')->path($tempDir . '/output.html');
-            $mediaDir = Storage::disk('local')->path($tempDir . '/media');
+    /**
+     * Bước 1: Nhào nặn mảng phẳng thành cấu trúc mảng phân cấp (Structured Data)
+     */
+    /**
+     * Bước 1: Nhào nặn mảng phẳng thành cấu trúc Model chuẩn (Structured Data)
+     */
+    public function buildStructuredData(array $flatData)
+    {
+        $structuredData = [];
+        $currentContext = null;
+        $currentQuestion = null;
 
-            // 2. Gọi Pandoc convert Docx -> HTML (Bóc tách ảnh và Toán học)
-            $this->runPandoc($fullFilePath, $outputHtmlPath, $mediaDir);
+        // Các biến lưu tạm (vì Choice và Answer có thể nằm lộn xộn thứ tự)
+        $rawChoices = [];
+        $rawAnswer = null;
 
-            // 3. Đọc nội dung HTML đã convert
-            $htmlContent = file_get_contents($outputHtmlPath);
+        foreach ($flatData as $row) {
+            $field = strtolower(trim($row['field']));
+            $content = trim($row['content']);
+            $rawContentText = strtolower(trim(strip_tags($content)));
 
-            // 4. Băm HTML thành mảng các câu hỏi thô (Raw Questions)
-            $rawQuestions = $this->parseHtmlToRawQuestions($htmlContent);
-
-            // 5. Duyệt qua từng câu để bóc tách và lưu vào DB
-            foreach ($rawQuestions as $index => $raw) {
-                try {
-                    // Phân tích loại câu hỏi (Trắc nghiệm hay Tự luận)
-                    $typeId = $this->detectQuestionType($raw);
-
-                    // Bóc tách dữ liệu chi tiết dựa theo loại
-                    $questionData = $this->extractQuestionData($raw, $typeId);
-
-                    // Gộp với dữ liệu chung (do giáo viên chọn trên form upload)
-                    $finalData = array_merge($commonData, $questionData);
-
-                    // Gọi Handler tương ứng để lưu Database
-                    $handler = QuestionHandlerFactory::make($typeId);
-                    $handler->store($finalData);
-
-                    $importedCount++;
-                } catch (Exception $e) {
-                    // Ghi nhận lỗi nhưng không làm chết vòng lặp (để import tiếp câu khác)
-                    $errors[] = "Lỗi ở câu " . ($index + 1) . ": " . $e->getMessage();
+            // 1. MỞ BLOCK (BEGIN)
+            if (str_starts_with($field, 'begin')) {
+                if (str_contains($rawContentText, 'sharedcontext')) {
+                    // Cấu trúc chuẩn theo SharedContext Model
+                    $currentContext = [
+                        'type' => 'SharedContext',
+                        'context_data' => [
+                            'tag_name' => null,
+                            'content' => null,
+                            'note' => null,
+                        ],
+                        'questions' => [],
+                    ];
+                } else {
+                    // Cấu trúc chuẩn theo Question Model
+                    $currentQuestion = [
+                        'tag_name' => null,
+                        'name' => null,
+                        'type' => null,           // Sẽ mapping sang question_type_id sau
+                        'stem' => null,
+                        'explanation' => null,
+                        'objectives' => [],       // Mảng chứa chuẩn đầu ra (Text)
+                        'choices' => [],          // Chuẩn bị hứng mảng Model QuestionChoice
+                        // BỔ SUNG DÒNG NÀY:
+                        'cognitive_level_tag' => null,
+                    ];
+                    $rawChoices = []; // Reset choice tạm
+                    $rawAnswer = null; // Reset answer tạm
                 }
             }
+            // 2. ĐÓNG BLOCK (END)
+            elseif (str_starts_with($field, 'end')) {
+                if (str_contains($rawContentText, 'sharedcontext') && $currentContext !== null) {
+                    $structuredData[] = $currentContext;
+                    $currentContext = null;
+                } elseif ($currentQuestion !== null) {
 
-        } catch (Exception $e) {
-            Log::error('Lỗi Import Pandoc: ' . $e->getMessage());
-            $errors[] = "Lỗi hệ thống khi xử lý file: " . $e->getMessage();
-        } finally {
-            // 6. Dọn dẹp rác: Xóa thư mục tạm sau khi làm xong
-            Storage::disk('local')->deleteDirectory($tempDir);
+                    // --- BẮT ĐẦU XỬ LÝ ANSWER VÀ CHOICES TRƯỚC KHI ĐÓNG CÂU HỎI ---
+                    $currentQuestion['choices'] = $this->parseChoicesAndAnswer($rawChoices, $rawAnswer);
+                    // -------------------------------------------------------------
+
+                    if ($currentContext !== null) {
+                        $currentContext['questions'][] = $currentQuestion;
+                    } else {
+                        $structuredData[] = ['type' => 'IndependentQuestion', 'question_data' => $currentQuestion];
+                    }
+                    $currentQuestion = null;
+                }
+            }
+            // 3. MAP DỮ LIỆU VÀO CÁC TRƯỜNG CHUẨN
+            else {
+                if ($field === 'anwer' || $field === 'answer') {
+                    $rawAnswer = strip_tags($content); // Lưu tạm chuỗi Answer (VD: "AC" hoặc "1, 3")
+                }
+
+                if ($currentQuestion !== null) {
+                    if ($field === 'objective' || $field === 'objectives') {
+                        $objectives = explode('#', strip_tags($content));
+                        $currentQuestion['objectives'] = array_filter(array_map('trim', $objectives));
+                    } elseif (str_starts_with($field, 'choice')) {
+                        $rawChoices[] = $content; // Gom tạm các choice vào mảng thô
+                    }
+                    // ---> BỔ SUNG ĐOẠN NÀY <---
+                    elseif ($field === 'cognitivelevel') {
+                        $currentQuestion['cognitive_level_tag'] = trim(strip_tags($content));
+                    }
+                    else {
+                        // Khớp đúng tên field với cột trong database (Nếu Word ghi Tag -> tag_name)
+                        $key = ($field === 'tag') ? 'tag_name' : $field;
+                        if (array_key_exists($key, $currentQuestion)) {
+                            $currentQuestion[$key] = $content;
+                        }
+                    }
+                } elseif ($currentContext !== null) {
+                    $key = ($field === 'tag') ? 'tag_name' : $field;
+                    // Với Context, Word có thể ghi Stem hoặc Content, ta gom chung về cột content của Database
+                    if ($key === 'stem') {
+                        $key = 'content';
+                    }
+
+                    if (array_key_exists($key, $currentContext['context_data'])) {
+                        $currentContext['context_data'][$key] = $content;
+                    }
+                }
+            }
         }
 
-        return [
-            'success_count' => $importedCount,
-            'errors'        => $errors
-        ];
+        return $structuredData;
     }
 
     /**
-     * Chạy lệnh Pandoc thông qua Symfony Process
+     * Hàm phụ: Biến các lựa chọn thô và chuỗi đáp án thành mảng Model QuestionChoice
      */
-    private function runPandoc(string $inputPath, string $outputPath, string $mediaDir): void
+    private function parseChoicesAndAnswer(array $rawChoices, ?string $rawAnswer)
     {
-        // Câu lệnh mẫu: pandoc input.docx -o output.html --extract-media=media_dir --mathml
-        $process = new Process([
-            'pandoc',
-            $inputPath,
-            '-o', $outputPath,
-            '--extract-media=' . $mediaDir,
-            '--mathml' // Hoặc '--mathjax' tùy thuộc vào cách bạn muốn render công thức
-        ]);
+        $choices = [];
+        $correctIndexes = [];
 
-        $process->run();
+        // Nếu có Answer, ta lọc ra các ký tự CHỮ (A-Z) hoặc SỐ (1-9)
+        // VD: "(ABCD)" -> "ABCD" | "1 3 4" -> "134" | "A,C" -> "AC"
+        if ($rawAnswer) {
+            $answerClean = strtoupper(preg_replace('/[^A-Z1-9]/i', '', $rawAnswer));
 
-        if (!$process->isSuccessful()) {
-            throw new ProcessFailedException($process);
+            foreach (str_split($answerClean) as $char) {
+                if (is_numeric($char)) {
+                    $correctIndexes[] = ((int) $char) - 1; // Số '1' -> Vị trí 0
+                } else {
+                    $correctIndexes[] = ord($char) - 65;  // Chữ 'A' (Mã ASCII 65) -> Vị trí 0, B -> 1
+                }
+            }
         }
+
+        foreach ($rawChoices as $index => $choiceHtml) {
+            // Xác định xem choice này có nằm trong danh sách đúng hay không
+            $isCorrect = null;
+            if ($rawAnswer !== null) {
+                $isCorrect = in_array($index, $correctIndexes);
+            }
+
+            // Map y hệt cấu trúc của Model QuestionChoice
+            $choices[] = [
+                'content' => $choiceHtml,
+                'is_correct' => $isCorrect, // true, false hoặc null
+                'order' => $index + 1,
+                'ratio' => 1.0, // Giá trị mặc định theo model
+            ];
+        }
+
+        return $choices;
     }
 
     /**
-     * Dùng Regex để cắt chuỗi HTML dài thành mảng các câu hỏi riêng biệt.
-     * Cần quy định dấu hiệu nhận biết, ví dụ: "Câu 1:", "Câu 2:"
+     * Bước 2: Phân phối dữ liệu cho các Handler kiểm tra (Validate)
+     * (Hàm này phục vụ cho tương lai khi bạn gọi lưu DB hoặc xuất Preview)
      */
-    private function parseHtmlToRawQuestions(string $htmlContent): array
+    public function validateAndProcess(array $structuredData)
     {
-        // TODO: Viết logic Regex cắt chuỗi. 
-        // Gợi ý: Tìm các đoạn bắt đầu bằng "Câu \d+:" đến trước "Câu \d+:" tiếp theo.
-        return [];
-    }
-
-    /**
-     * Dựa vào nội dung câu thô để đoán xem nó là Trắc nghiệm hay Tự luận.
-     * Trả về question_type_id tương ứng trong Database.
-     */
-    private function detectQuestionType(string $rawQuestion): int
-    {
-        // TODO: Kiểm tra nếu có A., B., C., D. -> Trắc nghiệm (VD: ID = 1)
-        // Nếu không có -> Tự luận (VD: ID = 2)
-        return 1; 
-    }
-
-    /**
-     * Bóc tách các thành phần (Lời dẫn, đáp án, lời giải) từ chuỗi HTML thô của 1 câu
-     */
-    private function extractQuestionData(string $rawQuestion, int $typeId): array
-    {
-        // TODO: Viết Regex bóc tách chi tiết.
-        // Cần trả về mảng theo cấu trúc mà validateData() của Handler yêu cầu.
-        
-        /* Cấu trúc mẫu trả về:
-        return [
-            'stem' => '<p>Động năng là gì?</p>',
-            'choices' => [ ... ], // Nếu là trắc nghiệm
-            'explanation' => '<p>Là năng lượng do chuyển động...</p>'
+        $results = [
+            'valid' => [],
+            'errors' => [],
         ];
-        */
-        
-        return [];
+
+        foreach ($structuredData as $index => $item) {
+            try {
+                if ($item['type'] === 'SharedContext') {
+                    // TODO: Xử lý riêng cho SharedContext (Lặp qua $item['questions'])
+                    // Tạm thời mình cứ ném vào mảng hợp lệ
+                    $results['valid'][] = $item;
+                } else {
+                    $questionData = $item['question_data'];
+                    $typeCode = strtoupper(strip_tags($questionData['type'] ?? ''));
+
+                    $handler = $this->getHandlerByCode($typeCode);
+
+                    if (! $handler) {
+                        throw new Exception("Không tìm thấy bộ xử lý cho loại câu hỏi: {$typeCode}");
+                    }
+
+                    // Tưởng tượng trong EssayHandler của bạn có hàm validateImport($data)
+                    // $validatedData = $handler->validateImport($questionData);
+
+                    // Nếu validate qua môn, đưa vào mảng hợp lệ
+                    $results['valid'][] = $item;
+                }
+            } catch (Exception $e) {
+                // Nếu Handler ném ra lỗi, bắt lại để báo ra màn hình cho người dùng
+                $results['errors'][] = [
+                    'index' => $index,
+                    'question_name' => strip_tags($item['question_data']['name'] ?? 'Không xác định'),
+                    'message' => $e->getMessage(),
+                ];
+            }
+        }
+
+        return $results;
+    }
+
+    /**
+     * Nhạc trưởng điều phối kiểm tra dữ liệu trước khi Preview
+     */
+    public function evaluateImportData(array $structuredData, User $user): array
+    {
+        // Dùng tham chiếu (&$item) để sửa trực tiếp vào mảng gốc
+        foreach ($structuredData as &$item) {
+            
+            if ($item['type'] === 'IndependentQuestion') {
+                $objectives = $item['question_data']['objectives'] ?? [];
+
+                // --- [CỬA 1]: Kiểm tra thẩm quyền (Yêu cầu cần đạt) ---
+                $door1 = $this->permissionService->verifyObjectivePermissions($objectives, $user);
+
+                // --- [CỬA 2]: Kiểm tra cấu trúc (Tạm khóa để test cửa 1) ---
+                $door2 = ['is_valid' => true, 'errors' => []];
+
+                // Gắn nhãn kết quả vào mảng dữ liệu
+                $item['question_data']['is_ready_to_save']  = $door1['is_valid'] && $door2['is_valid'];
+                $item['question_data']['permission_errors'] = $door1['errors'];
+                $item['question_data']['format_errors']     = $door2['errors']; // Để dành chỗ cho cửa 2
+
+            } elseif ($item['type'] === 'SharedContext') {
+                // Với Shared Context, ta phải duyệt qua từng câu hỏi con
+                $isContextReady = true;
+
+                foreach ($item['questions'] as &$q) {
+                    $objectives = $q['objectives'] ?? [];
+
+                    // --- [CỬA 1] ---
+                    $door1 = $this->permissionService->verifyObjectivePermissions($objectives, $user);
+
+                    // --- [CỬA 2] (Tạm khóa) ---
+                    $door2 = ['is_valid' => true, 'errors' => []];
+
+                    // Gắn nhãn
+                    $q['is_ready_to_save']  = $door1['is_valid'] && $door2['is_valid'];
+                    $q['permission_errors'] = $door1['errors'];
+                    $q['format_errors']     = $door2['errors'];
+
+                    // Nếu 1 câu con hỏng, cả cụm Context sẽ không được lưu (tuỳ logic của bạn, ở đây tạm set là false)
+                    if (!$q['is_ready_to_save']) {
+                        $isContextReady = false;
+                    }
+                }
+
+                // Gắn nhãn cho cả cụm Shared Context
+                $item['is_ready_to_save'] = $isContextReady;
+            }
+        }
+
+        return $structuredData;
+    }
+
+
+    /**
+     * Helper tìm Handler dựa vào Mã (ES, MC, TF...)
+     */
+    private function getHandlerByCode($code)
+    {
+        return match (trim($code)) {
+            'ES' => app(EssayHandler::class),
+            'MC' => app(MultipleChoiceHandler::class),
+            'TF' => app(TrueFalseHandler::class),
+            'SA' => app(ShortAnswerHandler::class),
+            default => null,
+        };
     }
 }

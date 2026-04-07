@@ -1,7 +1,8 @@
 @extends('layouts.main')
 
 @section('content')
-<div class="container mx-auto px-4 py-6" x-data="{ showAddModal: false, showEditModal: false, editData: { id: '', name: '', level_weight: '', url: '' } }">
+{{-- MỚI: Thêm tag_name: '' vào x-data --}}
+<div class="container mx-auto px-4 py-6" x-data="{ showAddModal: false, showEditModal: false, editData: { id: '', name: '', tag_name: '', level_weight: '', url: '' } }">
     {{-- Header --}}
     <div class="flex justify-between items-center mb-6">
         <div>
@@ -16,9 +17,6 @@
             <i class="fa-solid fa-plus mr-2"></i> Thêm Mức độ
         </button>
     </div>
-
-    {{-- Thông báo thành công / lỗi (Style xịn từ hôm qua) --}}
-    
 
     @if($errors->any())
         <div class="bg-rose-50 text-rose-600 border border-rose-200 p-4 rounded-md mb-4 shadow-sm">
@@ -41,6 +39,8 @@
                 <tr>
                     <th scope="col" class="px-6 py-4 w-16 text-center">STT</th>
                     <th scope="col" class="px-6 py-4">Tên mức độ nhận thức</th>
+                    {{-- MỚI: Thêm cột Mã định danh --}}
+                    <th scope="col" class="px-6 py-4 text-center">Mã Tag</th>
                     <th scope="col" class="px-6 py-4 text-center">Trọng số (Weight)</th>
                     <th scope="col" class="px-6 py-4 w-32 text-center">Thao tác</th>
                 </tr>
@@ -50,6 +50,8 @@
                     <tr class="hover:bg-slate-50 transition duration-150">
                         <td class="px-6 py-4 text-center text-slate-400">{{ $index + 1 }}</td>
                         <td class="px-6 py-4 font-medium text-slate-700">{{ $level->name }}</td>
+                        {{-- MỚI: Hiển thị tag_name --}}
+                        <td class="px-6 py-4 text-center font-mono font-bold text-blue-600">{{ $level->tag_name }}</td>
                         <td class="px-6 py-4 text-center">
                             <span class="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-xs font-bold border border-purple-200">
                                 Lvl {{ $level->level_weight }}
@@ -57,7 +59,8 @@
                         </td>
                         <td class="px-6 py-4 text-center">
                             <div class="flex items-center justify-center space-x-3">
-                                <button @click="showEditModal = true; editData = { id: '{{ $level->id }}', name: '{{ $level->name }}', level_weight: '{{ $level->level_weight }}', url: '{{ route('cognitive-levels.update', $level->id) }}' }" class="text-amber-500 hover:text-amber-700 transition" title="Sửa">
+                                {{-- MỚI: Truyền thêm tag_name vào editData khi click --}}
+                                <button @click="showEditModal = true; editData = { id: '{{ $level->id }}', name: '{{ $level->name }}', tag_name: '{{ $level->tag_name }}', level_weight: '{{ $level->level_weight }}', url: '{{ route('cognitive-levels.update', $level->id) }}' }" class="text-amber-500 hover:text-amber-700 transition" title="Sửa">
                                     <i class="fa-solid fa-pen-to-square"></i>
                                 </button>
                                 
@@ -73,7 +76,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="4" class="px-6 py-8 text-center text-slate-500">Chưa có mức độ nhận thức nào.</td>
+                        <td colspan="5" class="px-6 py-8 text-center text-slate-500">Chưa có mức độ nhận thức nào.</td>
                     </tr>
                 @endforelse
             </tbody>
@@ -90,10 +93,19 @@
                     @csrf
                     <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                         <h3 class="text-lg font-bold text-slate-900 mb-4">Thêm Mức độ nhận thức</h3>
+                        
                         <div class="mb-4">
                             <label class="block text-sm font-medium text-slate-700 mb-1">Tên mức độ <span class="text-rose-500">*</span></label>
                             <input type="text" name="name" required placeholder="VD: Nhận biết" class="w-full rounded-md border-slate-300 border px-3 py-2">
                         </div>
+
+                        {{-- MỚI: Thêm input tag_name --}}
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Mã định danh (Tag Name) <span class="text-rose-500">*</span></label>
+                            <input type="text" name="tag_name" required placeholder="VD: NB, TH, VD..." class="w-full rounded-md border-slate-300 border px-3 py-2 font-mono uppercase">
+                            <p class="text-xs text-slate-500 mt-1">Dùng để đọc cấu trúc file Word khi Import.</p>
+                        </div>
+
                         <div class="mb-4">
                             <label class="block text-sm font-medium text-slate-700 mb-1">Trọng số (Level Weight) <span class="text-rose-500">*</span></label>
                             <input type="number" name="level_weight" min="1" value="1" required class="w-full rounded-md border-slate-300 border px-3 py-2">
@@ -120,10 +132,18 @@
                     @method('PUT')
                     <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                         <h3 class="text-lg font-bold text-slate-900 mb-4">Sửa Mức độ nhận thức</h3>
+                        
                         <div class="mb-4">
                             <label class="block text-sm font-medium text-slate-700 mb-1">Tên mức độ <span class="text-rose-500">*</span></label>
                             <input type="text" name="name" x-model="editData.name" required class="w-full rounded-md border-slate-300 border px-3 py-2">
                         </div>
+
+                        {{-- MỚI: Thêm input tag_name, bind với editData.tag_name --}}
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Mã định danh (Tag Name) <span class="text-rose-500">*</span></label>
+                            <input type="text" name="tag_name" x-model="editData.tag_name" required class="w-full rounded-md border-slate-300 border px-3 py-2 font-mono uppercase">
+                        </div>
+
                         <div class="mb-4">
                             <label class="block text-sm font-medium text-slate-700 mb-1">Trọng số (Level Weight) <span class="text-rose-500">*</span></label>
                             <input type="number" name="level_weight" x-model="editData.level_weight" min="1" required class="w-full rounded-md border-slate-300 border px-3 py-2">

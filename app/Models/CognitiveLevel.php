@@ -9,7 +9,7 @@ class CognitiveLevel extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'level_weight'];
+    protected $fillable = ['name', 'tag_name', 'level_weight'];
 
     // Một mức độ nhận thức có nhiều câu hỏi
     public function questions()

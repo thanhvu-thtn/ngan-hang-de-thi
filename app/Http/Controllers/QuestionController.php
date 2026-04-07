@@ -9,68 +9,38 @@ use App\Models\QuestionType;
 use App\Models\Topic;
 use App\QuestionHandlers\EssayHandler;
 use App\QuestionHandlers\MultipleChoiceHandler;
+use App\Services\QuestionImportService;
+use App\Services\WordService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Route;
-
-use App\Services\WordService;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
+
+use App\Services\ObjectivePermissionService;
 
 class QuestionController extends Controller
 {
-    /**
-     * Hiển thị danh sách câu hỏi với các bộ lọc và tìm kiếm
-     */
+    protected $permissionService;
 
-    /* public function index(Request $request)
+    public function __construct(ObjectivePermissionService $permissionService)
     {
-        $topics = $this->getTopicsByRole();
-        $treeByGrade = $topics->groupBy('grade');
-        $hasNoAssignedTopics = $topics->isEmpty();
-
-        // 1. Kiểm tra xem người dùng có đang gửi yêu cầu lọc mục tiêu HOẶC tìm tag_name không
-        $isFiltering = $request->filled('filter_objective_ids') || $request->filled('tag_name');
-
-        // 2. Mặc định danh sách câu hỏi là null
-        $questions = null;
-
-        // 3. Nếu có bấm lọc hoặc tìm kiếm, tiến hành lấy dữ liệu
-        if ($isFiltering) {
-            $query = Question::query();
-
-            // Lọc qua bảng trung gian (Nếu có tích chọn Mục tiêu đánh giá)
-            if ($request->filled('filter_objective_ids')) {
-                $query->whereHas('objectives', function ($q) use ($request) {
-                    $q->whereIn('objectives.id', $request->filter_objective_ids);
-                });
-            }
-
-            // Lọc theo mã câu hỏi - tag_name (Nếu có nhập từ khóa tìm kiếm)
-            if ($request->filled('tag_name')) {
-                $query->where('tag_name', 'like', '%'.$request->tag_name.'%');
-            }
-
-            $questions = $query->paginate(15);
-            $questions->appends($request->query());
-        }
-
-        // 4. Truyền thêm biến $isFiltering sang view
-        return view('questions.index', compact('hasNoAssignedTopics', 'treeByGrade', 'questions', 'isFiltering'));
-    } */
+        $this->permissionService = $permissionService;
+    }
 
     /**
      * Hiển thị danh sách câu hỏi với các bộ lọc và tìm kiếm
      */
-    public function index(Request $request)
+   public function index(Request $request)
     {
-        $topics = $this->getTopicsByRole();
-        $treeByGrade = $topics->groupBy('grade');
-        $hasNoAssignedTopics = $topics->isEmpty();
+        // 1. Gọi thẳng Service để lấy Tree (Truyền true để lấy Count)
+        $treeByGrade = $this->permissionService->getAllowedObjectiveTree(auth()->user(), true);
+        $hasNoAssignedTopics = $treeByGrade->isEmpty();
 
         // 0. Lấy mảng ID của các Topic mà user hiện tại được phép truy cập
-        $authorizedTopicIds = $topics->pluck('id')->toArray();
+        // SỬA TẠI ĐÂY: Dùng collapse() để gộp các mảng con (theo grade) lại, sau đó lấy ID
+        $authorizedTopicIds = $treeByGrade->collapse()->pluck('id')->toArray();
 
         // 1. Kiểm tra xem người dùng có đang gửi yêu cầu lọc mục tiêu HOẶC tìm tag_name không
         $isFiltering = $request->filled('filter_objective_ids') || $request->filled('tag_name');
@@ -93,16 +63,9 @@ class QuestionController extends Controller
                 $query->whereDoesntHave('objectives', function ($q) use ($authorizedTopicIds) {
 
                     // Truy ngược từ Objective -> Content -> lấy topic_id để đối chiếu
-                    // (Dựa trên cấu trúc 'contents.objectives' ở hàm getTopicsByRole)
                     $q->whereHas('content', function ($contentQuery) use ($authorizedTopicIds) {
                         $contentQuery->whereNotIn('topic_id', $authorizedTopicIds);
                     });
-
-                    /** * LƯU Ý QUAN TRỌNG:
-                     * Nếu bảng `objectives` của bạn có TRỰC TIẾP cột `topic_id`,
-                     * hãy comment khối whereHas phía trên lại và sử dụng dòng ngắn gọn này:
-                     * * $q->whereNotIn('topic_id', $authorizedTopicIds);
-                     */
                 });
 
                 // (Tùy chọn) Chỉ lấy những câu hỏi đã được map ít nhất 1 objective (bỏ qua câu hỏi rác/lỗi)
@@ -125,6 +88,7 @@ class QuestionController extends Controller
             $questions = $query->paginate(15);
             $questions->appends($request->query());
         }
+        
         // LƯU LẠI ĐƯỜNG DẪN HIỆN TẠI (BAO GỒM CẢ QUERY LỌC VÀ PHÂN TRANG) VÀO SESSION
         session()->put('question_index_url', request()->fullUrl());
 
@@ -137,11 +101,10 @@ class QuestionController extends Controller
      */
     public function create()
     {
-        $cognitiveLevels = CognitiveLevel::orderBy('level_weight', 'asc')->get();
+        // Truyền false để không cần đếm câu hỏi cho nhẹ
+        $treeByGrade = $this->permissionService->getAllowedObjectiveTree(auth()->user(), false);
+        $cognitiveLevels = CognitiveLevel::all();
         $questionTypes = QuestionType::all();
-
-        // Gọi lại hàm dùng chung để lấy cây chuyên đề chuẩn theo phân quyền
-        $treeByGrade = $this->getTopicsByRole()->groupBy('grade');
 
         return view('questions.create', compact('cognitiveLevels', 'questionTypes', 'treeByGrade'));
     }
@@ -219,10 +182,7 @@ class QuestionController extends Controller
             $question->explanation->content = str_replace('../storage/', '/storage/', $question->explanation->content);
         }
 
-        // Lấy dữ liệu cho các Dropdown và Treeview
-        $topics = $this->getTopicsByRole(); // Hàm có sẵn của bạn
-        // Gọi lại hàm dùng chung để lấy cây chuyên đề chuẩn theo phân quyền
-        $treeByGrade = $this->getTopicsByRole()->groupBy('grade');
+        $treeByGrade = $this->permissionService->getAllowedObjectiveTree(auth()->user(), false);
 
         $cognitiveLevels = CognitiveLevel::all();
 
@@ -340,7 +300,7 @@ class QuestionController extends Controller
         return view('questions.upload');
     }
 
-    public function previewUpload(Request $request, WordService $wordService)
+    public function previewUpload(Request $request, WordService $wordService, QuestionImportService $importService)
     {
         $request->validate([
             'word_file' => 'required|file|mimes:docx|max:10240', // Tối đa 10MB
@@ -362,18 +322,46 @@ class QuestionController extends Controller
             // 2. Gọi WordService dịch toàn bộ ra HTML
             $html = $wordService->convertWordToHtml($fullPath);
 
+            // =========================================================
+            // ĐOẠN CẦN CHỈNH SỬA: XỬ LÝ ĐƯỜNG DẪN ẢNH (DÙNG REGEX)
+            // =========================================================
+
+            // Xác định URL web cho thư mục chứa ảnh (Ví dụ: http://localhost:8000/storage/temp_media/media)
+            $publicUrl = asset('storage/temp_media/media');
+
+            // Dùng Regex tìm TẤT CẢ các thẻ src=".../storage/temp_media/media/tên_file"
+            // và thay thế nó bằng URL web chuẩn.
+            $html = preg_replace('/src="[^"]*?\/storage\/temp_media\/media\/([^"]+)"/i', 'src="'.$publicUrl.'/$1"', $html);
+
+            // =========================================================
+            // HẾT ĐOẠN CHỈNH SỬA
+            // =========================================================
             // 3. Chạy hàm bóc tách HTML thành mảng các câu hỏi (Magic nằm ở đây)
-            $questions = $this->parseHtmlToQuestions($html);
-            dd($html);
+            // $questions = $this->parseHtmlToQuestions($html);
+            // Code mới
+            // 1. Chuyển HTML thành dạng Mảng Phẳng (Dữ liệu thô)
+            $jsonFlat = $wordService->htmlToJson($html);
+            $flatArray = json_decode($jsonFlat, true);
+
+            // Bắt lỗi nếu file Word không có table
+            if (isset($flatArray['error'])) {
+                return response()->json(['success' => false, 'message' => $flatArray['error']]);
+            }
+
+            // 2. Chuyển mảng phẳng thành Cấu trúc Câu hỏi
+            $structuredData = $importService->buildStructuredData($flatArray);
+
+            // Bạn có thể dd ra xem cấu trúc đã chuẩn chưa:
+
             // 4. Dọn rác file Word
             File::delete($fullPath);
 
-            // MỚI: Tạo ID phiên làm việc và lưu mảng câu hỏi vào Cache (Tồn tại trong 2 giờ)
-            $batchId = (string) Str::uuid();
-            cache()->put('upload_batch_' . $batchId, $questions, now()->addHours(2));
-
-            // Trả về giao diện Preview
-            return view('questions.preview', compact('questions', 'batchId'));
+            // 5. NHẠC TRƯỞNG RA TAY: Quét qua 2 cửa kiểm duyệt
+            // Lấy User hiện tại đang đăng nhập truyền vào
+            $structuredData = $importService->evaluateImportData($structuredData, auth()->user());
+            
+            // 6. Đẩy dữ liệu sang View Preview
+            return view('questions.preview', compact('structuredData'));
 
             // (Sau này ta sẽ return view('questions.preview') ở đây)
 
@@ -386,133 +374,12 @@ class QuestionController extends Controller
         }
     }
 
-    /**
-     * Hàm bóc tách HTML thành mảng câu hỏi dựa trên các Tag
-     */
-    private function parseHtmlToQuestions($html)
-    {
-        // Bước 1: Thay thế các thẻ Begin, End,... bị bọc bởi HTML (ví dụ <p><strong>Begin,</strong></p>)
-        // thành các mốc cố định [[BEGIN]], [[END]] để dễ dàng cắt chuỗi.
-        $html = preg_replace('/(?:<p[^>]*>)?\s*(?:<strong>|<b>)?Begin,(?:<\/strong>|<\/b>)?\s*(?:<\/p>)?/i', '[[BEGIN]]', $html);
-        $html = preg_replace('/(?:<p[^>]*>)?\s*(?:<strong>|<b>)?End,(?:<\/strong>|<\/b>)?\s*(?:<\/p>)?/i', '[[END]]', $html);
-
-        // Đánh dấu luôn các từ khóa cấu trúc (Chỉ đánh dấu khi nó nằm ở đầu dòng/đầu thẻ <p>)
-        $keywords = ['Type,', 'Tag,', 'Name,', 'Objective,', 'Stem,', 'Explanation,'];
-        foreach ($keywords as $kw) {
-            $marker = '[['.trim($kw, ',').']]';
-            $html = preg_replace('/(?:<p[^>]*>)?\s*(?:<strong>|<b>)?'.preg_quote($kw).'(?:<\/strong>|<\/b>)?/i', $marker, $html);
-        }
-
-        $questions = [];
-
-        // Bước 2: Tách lấy các block nằm giữa [[BEGIN]] và [[END]]
-        $blocks = explode('[[BEGIN]]', $html);
-        array_shift($blocks); // Bỏ đi phần chữ giới thiệu trước chữ Begin đầu tiên (nếu có)
-
-        foreach ($blocks as $block) {
-            // Cắt bỏ phần dư thừa sau chữ End,
-            $parts = explode('[[END]]', $block);
-            if (count($parts) < 2) {
-                continue;
-            } // Nếu không có End, thì bỏ qua block này (lỗi cú pháp)
-            $content = $parts[0];
-
-            // Bước 3: Rút trích dữ liệu vào mảng
-            // Dùng thủ thuật cắt chuỗi dựa vào các Marker ta đã đánh dấu
-            $item = [
-                'type' => $this->extractStringValue('TYPE', 'TAG', $content),
-                'tag' => $this->extractStringValue('TAG', 'NAME', $content),
-                'name' => $this->extractStringValue('NAME', 'OBJECTIVE', $content),
-                'objective' => $this->extractStringValue('OBJECTIVE', 'STEM', $content),
-                'stem' => $this->extractHtmlValue('STEM', 'EXPLANATION', $content),
-                'explanation' => $this->extractHtmlValue('EXPLANATION', null, $content),
-            ];
-
-            $questions[] = $item;
-        }
-
-        return $questions;
-    }
-
-    /**
-     * Hàm phụ trợ: Rút trích giá trị dạng Text thường (xoá sạch HTML)
-     */
-    private function extractStringValue($startMarker, $endMarker, $content)
-    {
-        $startPos = strpos($content, '[['.$startMarker.']]');
-        if ($startPos === false) {
-            return '';
-        }
-        $startPos += strlen('[['.$startMarker.']]');
-
-        $endPos = $endMarker ? strpos($content, '[['.$endMarker.']]', $startPos) : strlen($content);
-        if ($endPos === false) {
-            $endPos = strlen($content);
-        }
-
-        $text = substr($content, $startPos, $endPos - $startPos);
-
-        // Xoá HTML và khoảng trắng thừa, xoá luôn thẻ </p> dư
-        return trim(strip_tags(str_replace('</p>', '', $text)));
-    }
-
-    /**
-     * Hàm phụ trợ: Rút trích giá trị dạng HTML (Giữ nguyên công thức Toán và Ảnh)
-     */
-    private function extractHtmlValue($startMarker, $endMarker, $content)
-    {
-        $startPos = strpos($content, '[['.$startMarker.']]');
-        if ($startPos === false) {
-            return '';
-        }
-        $startPos += strlen('[['.$startMarker.']]');
-
-        $endPos = $endMarker ? strpos($content, '[['.$endMarker.']]', $startPos) : strlen($content);
-        if ($endPos === false) {
-            $endPos = strlen($content);
-        }
-
-        $html = substr($content, $startPos, $endPos - $startPos);
-
-        // Xoá chữ </p> rác có thể dính lại do Pandoc render
-        $html = preg_replace('/^<\/p>/i', '', trim($html));
-
-        return trim($html);
-    }
-
     public function importData() {}
 
     // ==========================================
     // CÁC HÀM HELPER DÙNG CHUNG TRONG CLASS
     // ==========================================
 
-    /**
-     * Lấy danh sách Topic dựa theo phân quyền User (Tránh lặp code)
-     */
-    private function getTopicsByRole()
-    {
-        $user = Auth::user();
-
-        $query = Topic::with(['topicType', 'contents.objectives' => function ($q) {
-            $q->withCount('questions');
-        }]);
-
-        if ($user->hasRole(['admin', 'Admin'])) {
-            // Admin thấy toàn bộ
-        } elseif ($user->hasRole('Tổ trưởng')) {
-            // Tổ trưởng thấy theo môn
-            $query->where('subject_id', $user->subject_id);
-        } else {
-            // Giáo viên thấy theo phân công
-            $assignedTopicIds = $user->topics()->pluck('topics.id');
-            if ($assignedTopicIds->isEmpty()) {
-                return collect(); // Trả về mảng rỗng luôn cho lẹ
-            }
-            $query->whereIn('id', $assignedTopicIds);
-        }
-
-        return $query->orderBy('grade')->orderBy('order')->get();
-    }
 
     /**
      * Helper mapping mã loại câu hỏi với Controller tương ứng

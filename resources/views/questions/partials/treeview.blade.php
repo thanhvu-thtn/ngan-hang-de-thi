@@ -53,7 +53,7 @@
                                                     {{ in_array($objective->id, old(str_replace('[]', '', $inputName ?? 'objective_ids'), $selectedIds ?? [])) ? 'checked' : '' }}>
 
                                                 <div
-                                                    class="text-sm text-slate-700 leading-relaxed flex-1 group-hover:text-slate-900 math-content">
+                                                    class="text-sm text-slate-700 leading-relaxed flex-1 group-hover:text-slate-900 math-content format-katex">
                                                     {!! $objective->description !!}
                                                 </div>
 
