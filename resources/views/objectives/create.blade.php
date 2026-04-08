@@ -61,11 +61,11 @@
         </form>
     </div>
 
-    <div id="preview-modal"
+    {{-- <div id="preview-modal"
         class="fixed inset-0 bg-slate-900/60 hidden items-center justify-center z-50 p-4 backdrop-blur-sm transition-opacity">
         <div
             class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col border border-slate-200 overflow-hidden">
-            {{-- Header Modal --}}
+            
             <div class="flex justify-between items-center bg-slate-50 p-4 border-b border-slate-200">
                 <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
                     <i class="fa-solid fa-microscope text-indigo-500"></i> Xem trước hiển thị thực tế
@@ -75,12 +75,12 @@
                 </button>
             </div>
 
-            {{-- Body Modal --}}
+            
             <div id="preview-body" class="p-8 overflow-y-auto text-slate-800 text-base leading-relaxed katex-scan"
                 style="min-height: 250px;">
             </div>
 
-            {{-- Footer Modal --}}
+            
             <div class="bg-slate-50 p-4 border-t border-slate-200 flex justify-end">
                 <button type="button" onclick="closePreview()"
                     class="px-6 py-2.5 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition">
@@ -88,7 +88,7 @@
                 </button>
             </div>
         </div>
-    </div>
+    </div> --}}
 
     @include('partials.editor_script', ['selector' => '#my-editor'])
 @endsection

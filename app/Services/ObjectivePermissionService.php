@@ -28,10 +28,23 @@ class ObjectivePermissionService
         $errors = [];
 
         // 2. Lấy danh sách topic_id mà User được cấp quyền từ bảng topic_user
-        $allowedTopicIds = DB::table('topic_user')
-            ->where('user_id', $user->id)
-            ->pluck('topic_id')
-            ->toArray();
+        if ($user->hasRole('Tổ trưởng')) {
+            // Tổ trưởng được quyền thao tác với tất cả các Topic thuộc môn của mình
+            $allowedTopicIds = DB::table('topics')
+                ->where('subject_id', $user->subject_id)
+                ->pluck('id')
+                ->toArray();
+        } else {
+            // Giáo viên được quyền thao tác với các Topic được phân công cụ thể
+            $allowedTopicIds = DB::table('topic_user')
+                ->where('user_id', $user->id)
+                ->pluck('topic_id')
+                ->toArray();
+        }
+        // $allowedTopicIds = DB::table('topic_user')
+        //     ->where('user_id', $user->id)
+        //     ->pluck('topic_id')
+        //     ->toArray();
 
         // 3. Truy vấn tìm các Objective dựa vào tag_name và join để lấy ra topic_id
         $objectives = DB::table('objectives')

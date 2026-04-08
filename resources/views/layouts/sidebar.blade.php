@@ -31,12 +31,15 @@
                     <li><a href="{{ route('permissions.index') }}"
                             class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i
                                 class="fa-solid fa-key w-5 text-center mr-2 text-slate-400"></i> Quản lý Quyền</a></li>
+                    <li><a href="{{ route('roles.index') }}"
+                            class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i
+                                class="fa-solid fa-user-shield w-5 text-center mr-2 text-slate-400"></i> Quản lý Vai trò</a></li>
                 </ul>
             </div>
         @endhasrole
 
-        {{-- NHÓM TỔ TRƯỞNG: Admin và Tổ trưởng đều thấy --}}
-        @hasanyrole('Admin|Tổ trưởng')
+        {{-- NHÓM TỔ TRƯỞNG: Tổ trưởng  --}}
+        @hasanyrole('Tổ trưởng')
             <div id="menu-to-truong" class="sidebar-group mt-6">
                 <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Tổ trưởng</h3>
                 <ul class="space-y-1">

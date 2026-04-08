@@ -12,19 +12,20 @@ use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\QuestionLayoutController;
 use App\Http\Controllers\QuestionTypeController;
+use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SharedContextController;
 use App\Http\Controllers\ShortAnswerController;
 use App\Http\Controllers\SubjectController;
-use App\Http\Controllers\TopicAssignmentController;
-use App\Http\Controllers\TopicController; // Đã thêm
+use App\Http\Controllers\TopicAssignmentController; // Đã thêm
+use App\Http\Controllers\TopicController;
 use App\Http\Controllers\TopicTypeController;
 use App\Http\Controllers\TrueFalseController;
-use App\Http\Controllers\UploadController;
+use App\Http\Controllers\UploadController; // Đã thêm
 use App\Http\Controllers\UserController; // Đã thêm
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
-// 1. TRANG CHỦ & LOGIN
+// 1. TRANG CHỦ & LOGIN-------------------
 Route::get('/', function () {
     return Auth::check() ? redirect()->route('dashboard') : redirect()->route('login');
 });
@@ -48,10 +49,12 @@ Route::middleware('auth')->group(function () {
         Route::resource('cognitive-levels', CognitiveLevelController::class)->except(['show']);
         Route::resource('question-layouts', QuestionLayoutController::class)->parameters(['question-layouts' => 'question_layout']);
         Route::resource('permissions', PermissionController::class)->except(['show', 'create']);
+        Route::get('/roles-permissions', [RoleController::class, 'index'])->name('roles.index');
+        Route::post('/roles-permissions', [RoleController::class, 'update'])->name('roles.update');
     });
 
     // --- TỔ TRƯỞNG & ADMIN ---
-    Route::middleware('role:Admin|Tổ trưởng')->group(function () {
+    Route::middleware('role:Tổ trưởng')->group(function () {
         Route::get('/topics/export', [TopicController::class, 'exportWord'])->name('topics.export');
         Route::resource('topics', TopicController::class);
         Route::resource('contents', ContentController::class);
@@ -65,7 +68,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // --- NGÂN HÀNG CÂU HỎI ---
-    Route::middleware(['role_or_permission:Admin|Tổ trưởng|bien-soan-cau-hoi'])->group(function () {
+    Route::middleware(['role_or_permission:Tổ trưởng|bien-soan-cau-hoi'])->group(function () {
 
         // =========================================================================
         // 1. NHÓM UPLOAD (YÊU CẦU PHẢI CÓ THÊM QUYỀN UPLOAD-CAU-HOI)
@@ -85,7 +88,7 @@ Route::middleware('auth')->group(function () {
         Route::prefix('questions')->name('questions.')->group(function () {
 
             // Bước 1: Setup
-            Route::post('setup', [QuestionController::class, 'storeSetup'])->name('storeSetup');
+            // Route::post('setup', [QuestionController::class, 'storeSetup'])->name('storeSetup');
 
             // Bước 2: Essay (Tự luận)
             Route::prefix('essay')->name('es.')->group(function () {
@@ -140,8 +143,11 @@ Route::middleware('auth')->group(function () {
         // =========================================================================
         // 4. RESOURCE CHÍNH QUẢN LÝ CÂU HỎI
         // =========================================================================
+        // Thêm dòng này để gọi giao diện AJAX
+        Route::get('questions/get-partial/{type_code}', [QuestionController::class, 'getPartial'])->name('questions.getPartial');
+        Route::get('questions/check-tag-name', [QuestionController::class, 'checkTagName'])->name('questions.check_tag_name');
         Route::resource('questions', QuestionController::class)
-            ->only(['index', 'create', 'show', 'edit', 'update', 'destroy'])
+            ->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy'])
             ->parameters(['questions' => 'question']);
     });
 });

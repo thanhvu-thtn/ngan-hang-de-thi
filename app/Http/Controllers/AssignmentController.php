@@ -20,6 +20,7 @@ class AssignmentController extends Controller
             ->where('subject_id', $user->subject_id)
             ->with('permissions')
             ->get();
+        //$teachers = User::with('permissions')->get();
 
         // 2. Định nghĩa danh sách MÃ QUYỀN (name) muốn GIẤU khỏi Tổ trưởng
         $hiddenPermissions = [
@@ -50,6 +51,7 @@ class AssignmentController extends Controller
         $teachers = User::whereIn('id', $teacherIds)
             ->where('subject_id', $user->subject_id)
             ->get();
+        //$teachers = User::whereIn('id', $teacherIds)->get();
 
         foreach ($teachers as $teacher) {
             $permsToAssign = $permissionsData[$teacher->id] ?? []; 

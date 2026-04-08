@@ -9,7 +9,7 @@
                 class="flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-xl font-medium hover:bg-slate-50 transition shadow-sm">
                 <i class="fa-solid fa-arrow-left"></i> Quay về
             </a>
-            <a href="{{ route('questions.es.edit', $question->id) }}"
+            <a href="{{ route('questions.edit', $question->id) }}"
                 class="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl font-medium hover:bg-amber-600 transition shadow-sm">
                 <i class="fa-solid fa-pen-to-square"></i> Chỉnh sửa
             </a>
@@ -20,12 +20,12 @@
 
             {{-- Hàng 1: Title (Chữ đậm, to hơn, bẻ dòng nếu UUID quá dài) --}}
             <h1 class="text-xl md:text-2xl font-bold text-slate-800 break-all mb-4">
-                Chi tiết câu hỏi: <span class="text-blue-600">{{ $question->tag_name }}</span>
+                Mã định danh: <span class="text-blue-600">{{ $question->tag_name }}</span>
             </h1>
 
             {{-- Hàng 2: Nội dung chính --}}
             <div class="text-sm font-bold text-slate-800 mb-2">
-                Nội dung chính: <span class="text-slate-600">{{ $question->name }}</span>
+                Tóm tắt: <span class="text-slate-600">{{ $question->name }}</span>
             </div>
 
             {{-- Hàng 3: Loại câu hỏi & Mức độ nhận thức --}}

@@ -2,23 +2,25 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreQuestionRequest;
 use App\Http\Requests\StoreQuestionSetupRequest;
+use App\Http\Requests\UpdateQuestionRequest;
 use App\Models\CognitiveLevel;
 use App\Models\Question;
 use App\Models\QuestionType;
 use App\Models\Topic;
 use App\QuestionHandlers\EssayHandler;
 use App\QuestionHandlers\MultipleChoiceHandler;
+use App\Services\ObjectivePermissionService;
 use App\Services\QuestionImportService;
 use App\Services\WordService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
-
-use App\Services\ObjectivePermissionService;
 
 class QuestionController extends Controller
 {
@@ -32,7 +34,7 @@ class QuestionController extends Controller
     /**
      * Hiển thị danh sách câu hỏi với các bộ lọc và tìm kiếm
      */
-   public function index(Request $request)
+    public function index(Request $request)
     {
         // 1. Gọi thẳng Service để lấy Tree (Truyền true để lấy Count)
         $treeByGrade = $this->permissionService->getAllowedObjectiveTree(auth()->user(), true);
@@ -88,7 +90,7 @@ class QuestionController extends Controller
             $questions = $query->paginate(15);
             $questions->appends($request->query());
         }
-        
+
         // LƯU LẠI ĐƯỜNG DẪN HIỆN TẠI (BAO GỒM CẢ QUERY LỌC VÀ PHÂN TRANG) VÀO SESSION
         session()->put('question_index_url', request()->fullUrl());
 
@@ -99,7 +101,7 @@ class QuestionController extends Controller
     /**
      * Bước 1: Giao diện thiết lập thông tin ban đầu
      */
-    public function create()
+    /* public function create()
     {
         // Truyền false để không cần đếm câu hỏi cho nhẹ
         $treeByGrade = $this->permissionService->getAllowedObjectiveTree(auth()->user(), false);
@@ -107,12 +109,31 @@ class QuestionController extends Controller
         $questionTypes = QuestionType::all();
 
         return view('questions.create', compact('cognitiveLevels', 'questionTypes', 'treeByGrade'));
+    } */
+
+    /**
+     * Hiển thị giao diện Form tạo câu hỏi CHÍNH
+     */
+    public function create()
+    {
+        $user = auth()->user();
+
+        // 1. Lấy cây mục tiêu/chuyên đề mà giáo viên này được phép biên soạn
+        // Sử dụng Service có sẵn để đảm bảo chỉ hiện những gì giáo viên được phân công
+        $treeByGrade = $this->permissionService->getAllowedObjectiveTree($user, false);
+
+        // 2. Lấy các dữ liệu cấu hình khác
+        $cognitiveLevels = CognitiveLevel::all();
+        $questionTypes = QuestionType::all();
+
+        // Truyền $user sang để hiển thị tên môn học
+        return view('questions.create', compact('treeByGrade', 'cognitiveLevels', 'questionTypes', 'user'));
     }
 
     /**
      * Bước 1 (Xử lý): Lưu nháp câu hỏi và Chuyển hướng sang Bước 2
      */
-    public function storeSetup(StoreQuestionSetupRequest $request)
+    /* public function storeSetup(StoreQuestionSetupRequest $request)
     {
         // 1. Validate dữ liệu Bước 1
         $validated = $request->validated();
@@ -127,7 +148,63 @@ class QuestionController extends Controller
 
         // 4. Chuyển hướng sang Bước 2 tương ứng
         return redirect()->route("questions.{$typeCode}.create");
+    } */
+
+    /**
+     * Hàm phục vụ AJAX: Trả về file HTML của giao diện con tương ứng
+     */
+    public function getPartial($type_code)
+    {
+        // Kiểm tra xem file view con có tồn tại không (VD: resources/views/questions/partials/type_ES.blade.php)
+        $viewName = 'questions.partials.type_'.$type_code;
+
+        if (view()->exists($viewName)) {
+            return view($viewName)->render();
+        }
+
+        return response()->json(['error' => 'Không tìm thấy giao diện cho loại câu hỏi này.'], 404);
     }
+
+    /**
+     * Xử lý lưu CHÍNH THỨC (Gom cả phần chung và phần riêng vào DB Transaction)
+     */
+    public function store(StoreQuestionRequest $request)
+    {
+        $validatedData = $request->validated();
+
+        DB::beginTransaction();
+
+        try {
+            $questionType = QuestionType::where('code', $validatedData['type_code'])->firstOrFail();
+
+            // 1. Đóng gói phần CHUNG (Đã bỏ created_by)
+            $commonData = [
+                'tag_name' => $validatedData['tag_name'],
+                'name' => $validatedData['name'],
+                'subject_id' => auth()->user()->subject_id,
+                'cognitive_level_id' => $validatedData['cognitive_level_id'],
+                'question_type_id' => $questionType->id,
+            ];
+
+            // 2. Gọi Handler xử lý phần RIÊNG (bóc ảnh) và LƯU vào DB
+            $handler = $this->getHandlerByCode($validatedData['type_code']);
+            $question = $handler->storeQuestion($commonData, $validatedData);
+
+            // 3. Gắn Mục tiêu kiến thức (Bảng trung gian)
+            $question->objectives()->attach($validatedData['objective_ids']);
+
+            DB::commit();
+
+            // return redirect()->route('questions.index')->with('success', 'Đã tạo câu hỏi thành công!');
+            return redirect()->route('questions.edit', $question->id)->with('success', 'Đã tạo câu hỏi thành công!');
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return back()->with('error', 'Có lỗi xảy ra khi lưu: '.$e->getMessage())->withInput();
+        }
+    }
+
+    // -----------------------------------------------------------------
 
     public function show($id)
     {
@@ -163,33 +240,27 @@ class QuestionController extends Controller
     // Edit
     public function edit($id)
     {
-        $question = Question::with([
-            'questionType', 'cognitiveLevel', 'objectives', 'explanation',
-        ])->findOrFail($id);
+        // Lấy câu hỏi kèm theo quan hệ cần thiết
+        $question = Question::with(['explanation', 'objectives'])->findOrFail($id);
 
-        if ($question->shared_context_id) {
-            // Trỏ sang SharedContextController nếu có
-            return redirect()->action([SharedContextController::class, 'edit'], ['id' => $question->shared_context_id]);
+        // CHỐT CHẶN 1: Nếu câu hỏi đã duyệt (status = 1) VÀ user KHÔNG có quyền thẩm định -> Cấm cửa!
+        /* if ($question->status == 1 && ! auth()->user()->can('tham-dinh-cau-hoi')) {
+            return redirect()->route('questions.index')
+                ->with('error', 'Câu hỏi này đã được thẩm định và phê duyệt. Bạn không có quyền chỉnh sửa!');
+        } */
+
+        // CHỐT CHẶN 1: Nếu câu hỏi đã duyệt (status = 1) VÀ user KHÔNG có quyền thẩm định -> Cấm cửa!
+        if ($question->status == 1 && ! auth()->user()->can('tham-dinh-cau-hoi')) {
+            return back(fallback: route('questions.index'))
+                ->with('error', 'Câu hỏi này đã được thẩm định và phê duyệt. Bạn không có quyền chỉnh sửa!');
         }
 
-        // --- ĐOẠN XỬ LÝ ẢNH CHẮC CHẮN ĂN ---
-        // Thay thế trực tiếp '../storage/' thành '/storage/'
-        if ($question->stem) {
-            $question->stem = str_replace('../storage/', '/storage/', $question->stem);
-        }
-
-        if ($question->explanation && $question->explanation->content) {
-            $question->explanation->content = str_replace('../storage/', '/storage/', $question->explanation->content);
-        }
-
-        $treeByGrade = $this->permissionService->getAllowedObjectiveTree(auth()->user(), false);
-
-        $cognitiveLevels = CognitiveLevel::all();
-
-        // Lấy mảng ID các mục tiêu đã được chọn để tick xanh
+        // Lấy danh sách cây mục tiêu (Giống hàm create)
+        $treeByGrade = $this->permissionService->getAllowedObjectiveTree(auth()->user(), true);
         $selectedObjectiveIds = $question->objectives->pluck('id')->toArray();
 
-        return view('questions.edit', compact('question', 'treeByGrade', 'cognitiveLevels', 'selectedObjectiveIds'));
+        // Trả về view dùng chung (gộp cả phần chung và riêng)
+        return view('questions.edit', compact('question', 'treeByGrade', 'selectedObjectiveIds'));
     }
 
     /**
@@ -199,62 +270,47 @@ class QuestionController extends Controller
     /**
      * Cập nhật thiết lập cơ bản và điều hướng sang trang sửa chi tiết
      */
-    public function update(Request $request, $question)
+    public function update(UpdateQuestionRequest $request, Question $question)
     {
-        // 1. Kiểm tra (Validate) dữ liệu gửi lên từ blade
-        $validated = $request->validate([
-            'tag_name' => 'required|string|max:255',
-            'name' => 'required|string|max:255',
-            'cognitive_level_id' => 'required|exists:cognitive_levels,id',
-            'objective_ids' => 'required|array|min:1',
-            'objective_ids.*' => 'exists:objectives,id',
-        ], [
-            'objective_ids.required' => 'Vui lòng chọn ít nhất một mục tiêu đánh giá từ cây chuyên đề.',
-        ]);
+        $validatedData = $request->validated();
 
-        // 2. Tìm câu hỏi và load kèm thông tin loại câu hỏi
-        $questionModel = Question::with('questionType')->findOrFail($question);
+        DB::beginTransaction();
 
-        // 3. Cập nhật dữ liệu thiết lập cơ bản vào bảng questions
-        $questionModel->update([
-            'tag_name' => $validated['tag_name'],
-            'name' => $validated['name'],
-            'cognitive_level_id' => $validated['cognitive_level_id'],
-        ]);
+        try {
+            // 1. Đóng gói phần CHUNG cơ bản
+            $commonData = [
+                'tag_name' => $validatedData['tag_name'],
+                'name' => $validatedData['name'],
+                'cognitive_level_id' => $validatedData['cognitive_level_id'],
+            ];
 
-        // 4. Lưu danh sách mục tiêu đánh giá (Cập nhật bảng trung gian)
-        // Hàm sync() tự động đối chiếu, thêm cái mới tích, xóa cái đã bỏ tích
-        $questionModel->objectives()->sync($validated['objective_ids']);
+            // 2. Xử lý logic RIÊNG cho người có quyền Thẩm định
+            if (auth()->user()->can('tham-dinh-cau-hoi')) {
+                $commonData['status'] = $validatedData['status'];
+                $commonData['difficulty_index'] = $validatedData['difficulty_index'] ?? $question->difficulty_index;
 
-        // ==========================================
-        // 5. XÁC ĐỊNH LUỒNG ĐI TIẾP THEO
-        // ==========================================
+                // Nếu người này đổi trạng thái thành 1 (Duyệt), ghi nhận checker_id là người đó
+                if ($validatedData['status'] == 1 && $question->status != 1) {
+                    $commonData['checker_id'] = auth()->id();
+                }
+            }
 
-        // Trướng hợp 1: Có shared_context_id (Câu hỏi chùm)
-        if ($questionModel->shared_context_id) {
-            return redirect()->route('shared_contexts.edit', ['id' => $questionModel->shared_context_id])
-                ->with('success', 'Đã lưu thiết lập. Vui lòng tiếp tục cập nhật nội dung dùng chung.');
+            // 3. Gọi Handler xử lý phần RIÊNG (bóc ảnh mới nếu có) và UPDATE vào DB
+            $handler = $this->getHandlerByCode($validatedData['type_code']);
+            $handler->updateQuestion($question, $commonData, $validatedData);
+
+            // 4. Cập nhật Mục tiêu kiến thức (Dùng sync để tự xóa cũ, thêm mới)
+            $question->objectives()->sync($validatedData['objective_ids']);
+
+            DB::commit();
+
+            return redirect()->route('questions.index')->with('success', 'Đã cập nhật câu hỏi thành công!');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return back()->with('error', 'Có lỗi xảy ra khi cập nhật: '.$e->getMessage())->withInput();
         }
-
-        // Trường hợp 2: Không có shared_context_id -> Dựa vào code của loại câu hỏi
-        $questionTypeCode = strtolower($questionModel->questionType->code ?? '');
-
-        // Danh sách Map mã câu hỏi sang tên Route tương ứng (dựa theo web.php của bạn)
-        $routeMap = [
-            'mc' => 'questions.mc.edit',
-            'tf' => 'questions.tf.edit',
-            'sa' => 'questions.sa.edit',
-            'es' => 'questions.es.edit',
-        ];
-
-        // Nếu mã câu hỏi không có trong danh sách hỗ trợ thì báo lỗi lại
-        if (! array_key_exists($questionTypeCode, $routeMap)) {
-            return back()->with('error', 'Hệ thống chưa hỗ trợ chỉnh sửa chi tiết cho loại câu hỏi có mã: '.strtoupper($questionTypeCode));
-        }
-
-        // Điều hướng sang route edit của Controller tương ứng (VD: MultipleChoiceController@edit)
-        return redirect()->route($routeMap[$questionTypeCode], ['id' => $questionModel->id])
-            ->with('success', 'Đã lưu thiết lập. Vui lòng tiếp tục cập nhật nội dung chi tiết.');
     }
 
     // Xoá câu hỏi
@@ -263,7 +319,19 @@ class QuestionController extends Controller
         // dd($id);
         try {
             // 1. Tìm câu hỏi theo ID, nếu không có sẽ quăng lỗi ModelNotFoundException
-            $question = Question::findOrFail($id);
+            $question = Question::with(['explanation', 'objectives'])->findOrFail($id);
+
+            // CHỐT CHẶN 1: Nếu câu hỏi đã duyệt (status = 1) VÀ user KHÔNG có quyền thẩm định -> Cấm cửa!
+            /* if ($question->status == 1 && ! auth()->user()->can('tham-dinh-cau-hoi')) {
+                return redirect()->route('questions.index')
+                    ->with('error', 'Câu hỏi này đã được thẩm định và phê duyệt. Bạn không có quyền chỉnh sửa!');
+            } */
+
+            // CHỐT CHẶN 1: Nếu câu hỏi đã duyệt (status = 1) VÀ user KHÔNG có quyền thẩm định -> Cấm cửa!
+            if ($question->status == 1 && ! auth()->user()->can('tham-dinh-cau-hoi')) {
+                return back(fallback: route('questions.index'))
+                    ->with('error', 'Câu hỏi này đã được thẩm định và phê duyệt. Bạn không có quyền xoá!');
+            }
             // dd($question);
             // KIỂM TRA SHARED CONTEXT CHẶN XÓA
             if (! empty($question->shared_context_id)) {
@@ -280,7 +348,9 @@ class QuestionController extends Controller
             // 4. Ủy quyền cho Handler xử lý việc xóa (Truyền object vào cho Handler dễ làm việc)
             $handler->destroy($question);
 
-            return redirect()->route('questions.index')
+            // return redirect()->route('questions.index')
+            //    ->with('success', 'Đã xóa câu hỏi thành công!');
+            return back(fallback: route('questions.index'))
                 ->with('success', 'Đã xóa câu hỏi thành công!');
 
         } catch (ModelNotFoundException $e) {
@@ -359,8 +429,8 @@ class QuestionController extends Controller
             // 5. NHẠC TRƯỞNG RA TAY: Quét qua 2 cửa kiểm duyệt
             // Lấy User hiện tại đang đăng nhập truyền vào
             $structuredData = $importService->evaluateImportData($structuredData, auth()->user());
-            
-            // 6. Đẩy dữ liệu sang View Preview
+
+            // dd($structuredData);
             return view('questions.preview', compact('structuredData'));
 
             // (Sau này ta sẽ return view('questions.preview') ở đây)
@@ -379,7 +449,6 @@ class QuestionController extends Controller
     // ==========================================
     // CÁC HÀM HELPER DÙNG CHUNG TRONG CLASS
     // ==========================================
-
 
     /**
      * Helper mapping mã loại câu hỏi với Controller tương ứng
@@ -405,5 +474,15 @@ class QuestionController extends Controller
             'SA' => app(ShortAnswerHandler::class),
             default => throw new \Exception('Không tìm thấy bộ xử lý cho loại câu hỏi này.'),
         };
+    }
+
+    /**
+     * API: Kiểm tra mã định danh (tag_name) có bị trùng không (Dùng cho AJAX)
+     */
+    public function checkTagName(Request $request)
+    {
+        $exists = Question::where('tag_name', $request->tag_name)->exists();
+
+        return response()->json(['exists' => $exists]);
     }
 }

@@ -2,12 +2,11 @@
 
 namespace App\Services;
 
+use App\Models\User;
 use App\QuestionHandlers\EssayHandler;
 use App\QuestionHandlers\MultipleChoiceHandler;
 use App\QuestionHandlers\ShortAnswerHandler;
 use App\QuestionHandlers\TrueFalseHandler;
-
-use App\Models\User;
 use Exception;
 
 class QuestionImportService
@@ -18,7 +17,6 @@ class QuestionImportService
     {
         $this->permissionService = $permissionService;
     }
-
 
     /**
      * Bước 1: Nhào nặn mảng phẳng thành cấu trúc mảng phân cấp (Structured Data)
@@ -106,8 +104,7 @@ class QuestionImportService
                     // ---> BỔ SUNG ĐOẠN NÀY <---
                     elseif ($field === 'cognitivelevel') {
                         $currentQuestion['cognitive_level_tag'] = trim(strip_tags($content));
-                    }
-                    else {
+                    } else {
                         // Khớp đúng tên field với cột trong database (Nếu Word ghi Tag -> tag_name)
                         $key = ($field === 'tag') ? 'tag_name' : $field;
                         if (array_key_exists($key, $currentQuestion)) {
@@ -221,11 +218,11 @@ class QuestionImportService
     /**
      * Nhạc trưởng điều phối kiểm tra dữ liệu trước khi Preview
      */
-    public function evaluateImportData(array $structuredData, User $user): array
+    /* public function evaluateImportData(array $structuredData, User $user): array
     {
         // Dùng tham chiếu (&$item) để sửa trực tiếp vào mảng gốc
         foreach ($structuredData as &$item) {
-            
+
             if ($item['type'] === 'IndependentQuestion') {
                 $objectives = $item['question_data']['objectives'] ?? [];
 
@@ -270,8 +267,88 @@ class QuestionImportService
         }
 
         return $structuredData;
-    }
+    } */
 
+    /**
+     * Nhạc trưởng điều phối kiểm tra dữ liệu trước khi Preview
+     */
+    public function evaluateImportData(array $structuredData, User $user): array
+    {
+        // Dùng tham chiếu (&$item) để sửa trực tiếp vào mảng gốc
+        foreach ($structuredData as &$item) {
+
+            if ($item['type'] === 'IndependentQuestion') {
+                $objectives = $item['question_data']['objectives'] ?? [];
+
+                // --- [CỬA 1]: Kiểm tra thẩm quyền (Yêu cầu cần đạt) ---
+                $door1 = $this->permissionService->verifyObjectivePermissions($objectives, $user);
+
+                // --- [CỬA 2]: Kiểm tra cấu trúc câu hỏi ---
+                $typeCode = strtoupper(strip_tags($item['question_data']['type'] ?? ''));
+                $handler = $this->getHandlerByCode($typeCode);
+
+                if ($handler) {
+                    // Gọi hàm kiểm tra cấu trúc từ Handler tương ứng
+                    $door2 = $handler->validateImportData($item['question_data']);
+                } else {
+                    $door2 = [
+                        'is_valid' => false,
+                        'errors' => ["Không tìm thấy bộ xử lý cho loại câu hỏi: {$typeCode}"],
+                    ];
+                }
+
+                // Gắn nhãn kết quả vào mảng dữ liệu
+                $item['question_data']['is_ready_to_save'] = $door1['is_valid'] && $door2['is_valid'];
+                $item['question_data']['permission_errors'] = $door1['errors'];
+                $item['question_data']['format_errors'] = $door2['errors'];
+                
+                // SỬA LỖI 1: BỔ SUNG GÁN WARNING CHO CÂU HỎI ĐỘC LẬP TẠI ĐÂY
+                $item['question_data']['format_warnings'] = $door2['warnings'] ?? [];
+
+            } elseif ($item['type'] === 'SharedContext') {
+                // Với Shared Context, ta phải duyệt qua từng câu hỏi con
+                $isContextReady = true;
+
+                foreach ($item['questions'] as &$q) {
+                    $objectives = $q['objectives'] ?? [];
+
+                    // --- [CỬA 1] ---
+                    $door1 = $this->permissionService->verifyObjectivePermissions($objectives, $user);
+
+                    // --- [CỬA 2]: Kiểm tra cấu trúc câu hỏi con ---
+                    $typeCode = strtoupper(strip_tags($q['type'] ?? ''));
+                    $handler = $this->getHandlerByCode($typeCode);
+
+                    if ($handler) {
+                        $door2 = $handler->validateImportData($q);
+                    } else {
+                        $door2 = [
+                            'is_valid' => false,
+                            'errors' => ["Không tìm thấy bộ xử lý cho loại câu hỏi: {$typeCode}"],
+                        ];
+                    }
+
+                    // Gắn nhãn
+                    $q['is_ready_to_save'] = $door1['is_valid'] && $door2['is_valid'];
+                    $q['permission_errors'] = $door1['errors'];
+                    $q['format_errors'] = $door2['errors'];
+
+                    // SỬA LỖI 2: ĐỔI $item['question_data'] THÀNH $q
+                    $q['format_warnings'] = $door2['warnings'] ?? [];
+
+                    // Nếu 1 câu con hỏng, cả cụm Context sẽ không được lưu
+                    if (! $q['is_ready_to_save']) {
+                        $isContextReady = false;
+                    }
+                }
+
+                // Gắn nhãn cho cả cụm Shared Context
+                $item['is_ready_to_save'] = $isContextReady;
+            }
+        }
+
+        return $structuredData;
+    }
 
     /**
      * Helper tìm Handler dựa vào Mã (ES, MC, TF...)

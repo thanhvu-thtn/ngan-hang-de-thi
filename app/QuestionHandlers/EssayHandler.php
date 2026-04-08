@@ -41,8 +41,8 @@ class EssayHandler implements QuestionHandlerInterface
         return DB::transaction(function () use ($data) {
             // Xử lý lưu ảnh vào local trước khi lưu vào DB
             $cleanStem = $this->imageService->localizeImages($data['stem']);
-            $cleanExplanation = isset($data['explanation']) 
-                                ? $this->imageService->localizeImages($data['explanation']) 
+            $cleanExplanation = isset($data['explanation'])
+                                ? $this->imageService->localizeImages($data['explanation'])
                                 : null;
 
             // 1. Tạo câu hỏi mới
@@ -55,12 +55,12 @@ class EssayHandler implements QuestionHandlerInterface
             ]);
 
             // 2. Gắn mục tiêu đánh giá (từ dữ liệu Bước 1)
-            if (!empty($data['objective_ids'])) {
+            if (! empty($data['objective_ids'])) {
                 $question->objectives()->sync($data['objective_ids']);
             }
 
             // 3. Tạo hướng dẫn chấm (Dùng đúng quan hệ 'explanation')
-            if (!empty($cleanExplanation)) {
+            if (! empty($cleanExplanation)) {
                 $question->explanation()->create([
                     'content' => $cleanExplanation,
                 ]);
@@ -71,6 +71,36 @@ class EssayHandler implements QuestionHandlerInterface
     }
 
     /**
+     * Xử lý ảnh và lưu câu hỏi Tự luận
+     */
+    public function storeQuestion(array $commonData, array $specificData): Question
+    {
+        // 1. Xử lý bóc tách ảnh Base64 ra file vật lý
+        $cleanStem = $this->imageService->localizeImages($specificData['stem']);
+        
+        $cleanExplanation = isset($specificData['explanation']) 
+                            ? $this->imageService->localizeImages($specificData['explanation']) 
+                            : null;
+
+        // 2. Gộp nội dung Đề bài vào mảng Dữ liệu chung
+        $questionData = array_merge($commonData, [
+            'stem' => $cleanStem,
+        ]);
+
+        // 3. Thực thi Create (Lúc này có đủ tag_name, name, và stem -> DB không báo lỗi nữa)
+        $question = Question::create($questionData);
+
+        // 4. Tạo hướng dẫn chấm (Explanation) nếu có
+        if (!empty($cleanExplanation)) {
+            $question->explanation()->create([
+                'content' => $cleanExplanation,
+            ]);
+        }
+
+        return $question; // Trả object question về cho Controller gắn Objectives
+    }
+
+    /**
      * 3. Cập nhật chi tiết câu hỏi (Khi Edit)
      */
     public function update(Question $question, array $validatedData): Question
@@ -78,8 +108,8 @@ class EssayHandler implements QuestionHandlerInterface
         return DB::transaction(function () use ($question, $validatedData) {
             // Xử lý ảnh trong nội dung cập nhật
             $cleanStem = $this->imageService->localizeImages($validatedData['stem']);
-            $cleanExplanation = isset($validatedData['explanation']) 
-                                ? $this->imageService->localizeImages($validatedData['explanation']) 
+            $cleanExplanation = isset($validatedData['explanation'])
+                                ? $this->imageService->localizeImages($validatedData['explanation'])
                                 : null;
 
             // Cập nhật đề bài
@@ -88,7 +118,7 @@ class EssayHandler implements QuestionHandlerInterface
             ]);
 
             // Cập nhật hoặc tạo mới lời giải (Dùng đúng quan hệ 'explanation')
-            if (!empty($cleanExplanation)) {
+            if (! empty($cleanExplanation)) {
                 $question->explanation()->updateOrCreate(
                     ['question_id' => $question->id],
                     ['content' => $cleanExplanation]
@@ -102,12 +132,42 @@ class EssayHandler implements QuestionHandlerInterface
     }
 
     /**
+     * Xử lý ảnh và Cập nhật câu hỏi Tự luận
+     */
+    public function updateQuestion(Question $question, array $commonData, array $specificData): void
+    {
+        // 1. Xử lý ảnh cho nội dung mới (ImageService sẽ tự lo việc không tải lại ảnh đã có)
+        $cleanStem = $this->imageService->localizeImages($specificData['stem']);
+        
+        // 2. Gộp nội dung Đề bài vào mảng Dữ liệu chung và Update
+        $questionData = array_merge($commonData, [
+            'stem' => $cleanStem,
+        ]);
+        
+        $question->update($questionData);
+
+        // 3. Xử lý Lời giải
+        if (isset($specificData['explanation']) && !empty($specificData['explanation'])) {
+            $cleanExplanation = $this->imageService->localizeImages($specificData['explanation']);
+            
+            // Dùng updateOrCreate để: Có thì sửa, chưa có thì thêm mới
+            $question->explanation()->updateOrCreate(
+                ['question_id' => $question->id],
+                ['content' => $cleanExplanation]
+            );
+        } else {
+            // Nếu gửi lên rỗng, ta xóa lời giải cũ đi (nếu có)
+            $question->explanation()->delete();
+        }
+    }
+
+    /**
      * 4. Trả về cấu trúc dữ liệu chuẩn
      */
     public function getDetails(Question $question): array
     {
         // Dùng $question->explanation thay vì $question->explanations()
-        $explanation = $question->explanation; 
+        $explanation = $question->explanation;
 
         return [
             'type' => 'es',
@@ -123,19 +183,19 @@ class EssayHandler implements QuestionHandlerInterface
     {
         // 1. DỌN DẸP FILE ẢNH VẬT LÝ TRONG Ổ CỨNG
         // Quét và xóa ảnh trong đề bài (stem)
-        if (!empty($question->stem)) {
+        if (! empty($question->stem)) {
             $this->imageService->deleteImagesFromContent($question->stem);
         }
 
         // Quét và xóa ảnh trong lời giải
         $explanation = $question->explanation;
-        if ($explanation && !empty($explanation->content)) {
+        if ($explanation && ! empty($explanation->content)) {
             $this->imageService->deleteImagesFromContent($explanation->content);
         }
 
         // 2. XÓA DỮ LIỆU TRONG DATABASE (Dùng Transaction để đảm bảo an toàn)
         DB::transaction(function () use ($question) {
-            
+
             // Xóa tất cả các lựa chọn (Đề phòng rác dữ liệu nếu trước đó là câu trắc nghiệm)
             if (method_exists($question, 'choices')) {
                 $question->choices()->delete();
@@ -154,5 +214,33 @@ class EssayHandler implements QuestionHandlerInterface
             // Cuối cùng, xóa câu hỏi gốc
             $question->delete();
         });
+    }
+
+    /**
+     * Validate dữ liệu khi Import (từ mảng, không dùng Request)
+     */
+    public function validateImportData(array $questionData): array
+    {
+        $isValid = true;
+        $errors = [];
+        $warnings = []; // Thêm mảng chứa cảnh báo nhẹ
+
+        // 1. Kiểm tra lỗi bắt buộc (Ví dụ: Thiếu nội dung câu hỏi)
+        if (empty(trim(strip_tags($questionData['stem'] ?? '')))) {
+            $isValid = false;
+            $errors[] = 'Câu hỏi tự luận không được để trống nội dung (Stem).';
+        }
+
+        // 2. CẢNH BÁO: Nếu tự luận mà lại có Lựa chọn (Choices)
+        if (!empty($questionData['choices'])) {
+            // Ghi nhận cảnh báo nhưng KHÔNG đánh trượt (không đổi $isValid)
+            $warnings[] = 'Phát hiện có Lựa chọn đáp án (Choices). Câu hỏi Tự luận (ES) không cần dữ liệu này, khi lưu câu hỏi vào hệ thống, phần này sẽ bị bỏ qua.';
+        }
+
+        return [
+            'is_valid' => $isValid,
+            'errors'   => $errors,
+            'warnings' => $warnings, // Trả về thêm nhãn warnings
+        ];
     }
 }
