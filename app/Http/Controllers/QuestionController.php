@@ -219,7 +219,7 @@ class QuestionController extends Controller
         $handler = $this->getHandlerByCode($typeCode);
         // 3. Lấy toàn bộ "cỗ" đã được Handler dọn sẵn (dữ liệu chung + riêng)
         $data = $handler->getDetails($question);
-        
+
         // 4. Bưng lên giao diện Blade
         return view('questions.show', compact('data'));
     }
@@ -227,27 +227,60 @@ class QuestionController extends Controller
     // Edit
     public function edit($id)
     {
-        // Lấy câu hỏi kèm theo quan hệ cần thiết
-        $question = Question::with(['explanation', 'objectives'])->findOrFail($id);
+        try {
+            // 1. Tìm câu hỏi theo ID, load sẵn các quan hệ để tránh N+1
+            $question = Question::with(['questionType', 'objectives', 'cognitiveLevel'])
+                                ->findOrFail($id);
 
-        // CHỐT CHẶN 1: Nếu câu hỏi đã duyệt (status = 1) VÀ user KHÔNG có quyền thẩm định -> Cấm cửa!
-        /* if ($question->status == 1 && ! auth()->user()->can('tham-dinh-cau-hoi')) {
+            $user = auth()->user();
+
+            // --- KIỂM TRA 1: Quyền sửa câu hỏi đã thẩm định ---
+            // Trạng thái 'approved' (đã thẩm định) thì phải có quyền 'tham-dinh-cau-hoi' mới được sửa
+            if ($question->status === 'approved' && !$user->can('tham-dinh-cau-hoi')) {
+                return redirect()->route('questions.index')
+                    ->with('error', 'Câu hỏi đã được thẩm định, bạn không có quyền sửa.');
+            }
+
+            // --- KIỂM TRA 2: Quyền theo phân công Chuyên đề (Topic) ---
+            $objectiveCodes = $question->objectives->pluck('tag_name')->toArray();
+            
+            // Sử dụng Service kiểm tra xem User có quản lý các mã Chuẩn đầu ra này không
+            $permissionCheck = $this->permissionService->verifyObjectivePermissions($objectiveCodes, $user);
+            
+            if (!$permissionCheck['is_valid']) {
+                return redirect()->route('questions.index')
+                    ->with('error', 'Câu hỏi không có quyền sửa (nằm ngoài chuyên đề được phân công).');
+            }
+
+            // --- LẤY DỮ LIỆU CHI TIẾT QUA HANDLER ---
+            $typeCode = $question->questionType->code ?? null;
+            if (!$typeCode) {
+                return back()->with('error', 'Không xác định được loại câu hỏi.');
+            }
+
+            $handler = $this->getHandlerByCode($typeCode);
+            $data = $handler->getDetails($question);
+
+            // --- LẤY MASTER DATA CHO DROPDOWNS ---
+            $cognitiveLevels = CognitiveLevel::all();
+            $treeByGrade = $this->permissionService->getAllowedObjectiveTree($user, false);
+            // BỔ SUNG DÒNG NÀY: Trích xuất mảng ID chuẩn đầu ra từ $data để truyền ra Blade
+            $selectedObjectiveIds = $data['objective_ids'] ?? [];
+
+            // Trả về view với đầy đủ biến (nhớ thêm 'selectedObjectiveIds' vào compact)
+            return view('questions.edit', compact(
+                'question', 
+                'data', 
+                'cognitiveLevels', 
+                'treeByGrade', 
+                'selectedObjectiveIds'
+            ));
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            // Trường hợp ID không tồn tại trong database
             return redirect()->route('questions.index')
-                ->with('error', 'Câu hỏi này đã được thẩm định và phê duyệt. Bạn không có quyền chỉnh sửa!');
-        } */
-
-        // CHỐT CHẶN 1: Nếu câu hỏi đã duyệt (status = 1) VÀ user KHÔNG có quyền thẩm định -> Cấm cửa!
-        if ($question->status == 1 && ! auth()->user()->can('tham-dinh-cau-hoi')) {
-            return back(fallback: route('questions.index'))
-                ->with('error', 'Câu hỏi này đã được thẩm định và phê duyệt. Bạn không có quyền chỉnh sửa!');
+                ->with('error', 'Không tìm thấy câu hỏi yêu cầu.');
         }
-
-        // Lấy danh sách cây mục tiêu (Giống hàm create)
-        $treeByGrade = $this->permissionService->getAllowedObjectiveTree(auth()->user(), true);
-        $selectedObjectiveIds = $question->objectives->pluck('id')->toArray();
-
-        // Trả về view dùng chung (gộp cả phần chung và riêng)
-        return view('questions.edit', compact('question', 'treeByGrade', 'selectedObjectiveIds'));
     }
 
     /**
@@ -439,7 +472,7 @@ class QuestionController extends Controller
     public function importData(Request $request, QuestionImportService $importService)
     {
         $uuid = $request->input('import_uuid');
-        
+
         $structuredData = \Cache::pull('import_data_'.$uuid);
 
         if (! $structuredData) {
@@ -448,7 +481,7 @@ class QuestionController extends Controller
 
         try {
             // Gọi nhạc trưởng ra tay
-            
+
             $totalSaved = $importService->saveStructuredData($structuredData, auth()->id());
 
             return redirect()->route('questions.index')

@@ -12,15 +12,15 @@
         <div>
             <div class="flex justify-between items-end mb-2">
                 <label class="block text-sm font-semibold text-slate-700">
-                    Đề bài (Nội dung câu hỏi) <span class="text-rose-500">*</span>
+                    Câu hỏi <span class="text-rose-500">*</span>
                 </label>
-                {{-- NÚT XEM TRƯỚC ĐỀ BÀI --}}
                 <button type="button" onclick="window.previewContent('editor-stem')" class="text-xs px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition border border-blue-200 flex items-center gap-1 shadow-sm font-medium">
-                    <i class="fa-solid fa-eye"></i> Xem trước Toán học
+                    <i class="fa-solid fa-eye"></i> Preview
                 </button>
             </div>
-            <div class="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                <textarea id="editor-stem" name="stem" class="w-full border-0 focus:ring-0" rows="6" placeholder="Nhập nội dung đề bài tại đây...">{!! old('stem') !!}</textarea>
+            <div class="border border-slate-200 rounded-xl overflow-hidden shadow-sm focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all">
+                {{-- ĐÃ SỬA CHỖ NÀY: Truyền $data['stem'] --}}
+                <textarea id="editor-stem" name="stem" class="w-full border-0 focus:ring-0" rows="6" placeholder="Nhập nội dung đề bài tại đây...">{!! old('stem', $data['stem'] ?? '') !!}</textarea>
             </div>
             @error('stem')
                 <p class="text-sm text-red-500 mt-1"><i class="fa-solid fa-circle-exclamation"></i> {{ $message }}</p>
@@ -33,13 +33,13 @@
                 <label class="block text-sm font-semibold text-slate-700">
                     Lời giải chi tiết / Hướng dẫn chấm
                 </label>
-                {{-- NÚT XEM TRƯỚC LỜI GIẢI --}}
                 <button type="button" onclick="window.previewContent('editor-explanation')" class="text-xs px-3 py-1.5 bg-slate-50 text-slate-600 hover:bg-slate-100 rounded-lg transition border border-slate-200 flex items-center gap-1 shadow-sm font-medium">
-                    <i class="fa-solid fa-eye"></i> Xem trước Toán học
+                    <i class="fa-solid fa-eye"></i> Preview
                 </button>
             </div>
             <div class="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                <textarea id="editor-explanation" name="explanation" class="w-full border-0 focus:ring-0" rows="6" placeholder="Nhập lời giải hoặc hướng dẫn chấm (không bắt buộc)...">{!! old('explanation') !!}</textarea>
+                {{-- ĐÃ SỬA CHỖ NÀY: Truyền $data['explanation'] --}}
+                <textarea id="editor-explanation" name="explanation" class="w-full border-0 focus:ring-0" rows="6" placeholder="Nhập lời giải hoặc hướng dẫn chấm (không bắt buộc)...">{!! old('explanation', $data['explanation'] ?? '') !!}</textarea>
             </div>
             @error('explanation')
                 <p class="text-sm text-red-500 mt-1"><i class="fa-solid fa-circle-exclamation"></i> {{ $message }}</p>
@@ -47,4 +47,3 @@
         </div>
     </div>
 </div>
-

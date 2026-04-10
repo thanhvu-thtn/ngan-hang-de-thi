@@ -199,7 +199,9 @@ abstract class BaseQuestionHandler implements QuestionHandlerInterface
             'difficulty_index' => $question->difficulty_index,
             'status' => $question->status,
             'created_at' => $question->created_at->format('d/m/Y H:i'),
-
+            'shared_context_id' => $question->shared_context_id ?? null,
+            
+            // CÁC TRƯỜNG HIỂN THỊ (Dùng cho Show)
             'type_name' => $question->questionType->name ?? 'Không xác định',
             'type_code' => $question->questionType->code ?? '',
             'cognitive_level' => $question->cognitiveLevel->name ?? 'Không xác định',
@@ -208,9 +210,15 @@ abstract class BaseQuestionHandler implements QuestionHandlerInterface
             'layout_name' => $question->layout->name ?? null,
             'checker_name' => $question->checker->name ?? null,
 
+            // CÁC TRƯỜNG ID GỐC (Bổ sung thêm để dùng cho Edit)
+            'cognitive_level_id' => $question->cognitive_level_id,
+            'type_id'            => $question->question_type_id,
+            'objective_ids'      => $question->objectives->pluck('id')->toArray(), // Lấy mảng ID chuẩn đầu ra
+
             'objectives' => $question->objectives->map(function ($obj) {
                 return [
-                    'tag_name' => $obj->tag_name,
+                    'id'          => $obj->id, // Bổ sung id
+                    'tag_name'    => $obj->tag_name,
                     'description' => $obj->description,
                 ];
             })->toArray(),

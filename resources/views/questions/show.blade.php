@@ -8,7 +8,13 @@
                 <h1 class="text-2xl font-bold text-gray-900 flex items-center">
                     Câu hỏi: <span class="ml-2 text-blue-600 format-katex">{{ $data['tag_name'] }}</span>
                 </h1>
-                <p class="text-sm text-gray-500 mt-1">Loại: {{ $data['type_name'] }} | Ngày tạo: {{ $data['created_at'] }}
+                <p class="text-sm text-gray-500 mt-1">
+                    {{-- Kiểm tra nếu có dữ liệu dùng chung --}}
+                    @if (!empty($data['shared_context_id']))
+                        <a href="#" class="text-indigo-600 hover:text-indigo-800 hover:underline transition-colors">Câu
+                            hỏi có dữ liệu dùng chung</a> |
+                    @endif
+                    Loại: {{ $data['type_name'] }} | Ngày tạo: {{ $data['created_at'] }}
                 </p>
             </div>
             <button onclick="window.history.back();"
