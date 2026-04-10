@@ -1,7 +1,7 @@
 <div class="border border-slate-100 bg-slate-50 rounded-xl p-5 relative mt-4">
     {{-- Nhãn Loại Câu hỏi (Trên cùng góc phải) --}}
     <div
-        class="absolute -top-3 -right-3 {{ empty($q['type']) ? 'bg-orange-500' : 'bg-blue-500' }} text-white text-xs font-bold px-3 py-1 rounded-lg shadow">
+        class="absolute -top-3 -right-3 {{ empty($q['type']) ? 'bg-rose-500' : 'bg-blue-500' }} text-white text-xs font-bold px-3 py-1 rounded-lg shadow">
         Loại: {{ empty($q['type']) ? 'Chưa rõ' : strtoupper($q['type']) }}
     </div>
 
@@ -9,35 +9,32 @@
     <div class="flex flex-wrap gap-2 mb-4 items-center">
         <span class="text-slate-800 font-bold">Câu {{ $index }}:</span>
 
-        {{-- Type (Hiển thị thêm lỗi ở đây vì nhãn góc phải quá ngắn không chứa hết chữ) --}}
+        {{-- Type (LỖI NẶNG -> ĐỎ) --}}
         @if (empty($q['type']))
-            <span class="bg-orange-100 text-orange-700 text-xs px-2 py-1 rounded border border-orange-300 font-medium">
-                <i class="fa-solid fa-triangle-exclamation mr-1"></i>Type: Nội dung này chưa được nhập hoặc không upload
-                được
+            <span class="bg-rose-100 text-rose-700 text-xs px-2 py-1 rounded border border-rose-300 font-medium">
+                <i class="fa-solid fa-triangle-exclamation mr-1"></i>Type: Nội dung này chưa được nhập hoặc không upload được
             </span>
         @endif
 
-        {{-- Name --}}
+        {{-- Name (CẢNH BÁO NHẸ -> VÀNG) --}}
         @if (!empty($q['name']))
             <span class="text-slate-600 font-medium">[{{ $q['name'] }}]</span>
         @else
-            <span class="bg-orange-100 text-orange-700 text-xs px-2 py-1 rounded border border-orange-300 font-medium">
-                <i class="fa-solid fa-triangle-exclamation mr-1"></i>Name: Nội dung này chưa được nhập hoặc không upload
-                được
+            <span class="bg-amber-100 text-amber-700 text-xs px-2 py-1 rounded border border-amber-300 font-medium">
+                <i class="fa-solid fa-circle-info mr-1"></i>Name: Nội dung này chưa được nhập
             </span>
         @endif
 
-        {{-- Tag --}}
+        {{-- Tag (CẢNH BÁO NHẸ -> VÀNG) --}}
         @if (!empty($q['tag_name']))
             <span class="bg-slate-200 text-slate-700 text-xs px-2 py-1 rounded">Tag: {{ $q['tag_name'] }}</span>
         @else
-            <span class="bg-orange-100 text-orange-700 text-xs px-2 py-1 rounded border border-orange-300 font-medium">
-                <i class="fa-solid fa-triangle-exclamation mr-1"></i>Tag: Nội dung này chưa được nhập hoặc không upload
-                được
+            <span class="bg-amber-100 text-amber-700 text-xs px-2 py-1 rounded border border-amber-300 font-medium">
+                <i class="fa-solid fa-circle-info mr-1"></i>Tag: Nội dung này chưa được nhập
             </span>
         @endif
 
-        {{-- Objectives --}}
+        {{-- Objectives (CẢNH BÁO NHẸ -> VÀNG) --}}
         @if (!empty($q['objectives']))
             @foreach ($q['objectives'] as $obj)
                 <span class="bg-sky-100 text-sky-700 text-xs px-2 py-1 rounded border border-sky-200">
@@ -45,21 +42,19 @@
                 </span>
             @endforeach
         @else
-            <span class="bg-orange-100 text-orange-700 text-xs px-2 py-1 rounded border border-orange-300 font-medium">
-                <i class="fa-solid fa-triangle-exclamation mr-1"></i>Objectives: Nội dung này chưa được nhập hoặc không
-                upload được
+            <span class="bg-amber-100 text-amber-700 text-xs px-2 py-1 rounded border border-amber-300 font-medium">
+                <i class="fa-solid fa-circle-info mr-1"></i>Objectives: Nội dung này chưa được nhập
             </span>
         @endif
 
-        {{-- Cognitive Level --}}
+        {{-- Cognitive Level (LỖI NẶNG -> ĐỎ) --}}
         @if (!empty($q['cognitive_level_tag']))
             <span class="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-1 rounded border border-purple-200">
                 <i class="fa-solid fa-brain mr-1"></i>{{ $q['cognitive_level_tag'] }}
             </span>
         @else
-            <span class="bg-orange-100 text-orange-700 text-xs px-2 py-1 rounded border border-orange-300 font-medium">
-                <i class="fa-solid fa-triangle-exclamation mr-1"></i>CognitiveLevel: Nội dung này chưa được nhập hoặc
-                không upload được
+            <span class="bg-rose-100 text-rose-700 text-xs px-2 py-1 rounded border border-rose-300 font-medium">
+                <i class="fa-solid fa-triangle-exclamation mr-1"></i>CognitiveLevel: Nội dung này chưa được nhập
             </span>
         @endif
     </div>
@@ -78,8 +73,9 @@
                 </div>
             @endif
 
+            {{-- ĐÃ SỬA THÀNH MÀU ĐỎ (rose) --}}
             @if (!empty($q['format_errors']))
-                <div class="bg-amber-50 text-amber-600 border border-amber-200 px-3 py-2 rounded text-sm">
+                <div class="bg-rose-50 text-rose-600 border border-rose-200 px-3 py-2 rounded text-sm">
                     <strong><i class="fa-solid fa-triangle-exclamation mr-1"></i> Lỗi định dạng:</strong>
                     <ul class="list-disc ml-5 mt-1">
                         @foreach ($q['format_errors'] as $err)
@@ -98,10 +94,10 @@
                 {!! $q['stem'] !!}
             </div>
         @else
-            <div class="bg-orange-50 border-l-4 border-orange-500 p-3 rounded-r-lg">
-                <div class="flex items-center text-orange-700 text-sm font-bold">
-                    <i class="fa-solid fa-triangle-exclamation mr-2"></i> Nội dung câu hỏi (Stem): Nội dung này chưa
-                    được nhập hoặc không upload được
+            {{-- ĐÃ SỬA THÀNH MÀU ĐỎ (rose) --}}
+            <div class="bg-rose-50 border-l-4 border-rose-500 p-3 rounded-r-lg">
+                <div class="flex items-center text-rose-700 text-sm font-bold">
+                    <i class="fa-solid fa-triangle-exclamation mr-2"></i> Nội dung câu hỏi (Stem): Nội dung này chưa được nhập hoặc không upload được
                 </div>
             </div>
         @endif
@@ -109,22 +105,10 @@
 
     {{-- KHỐI 3: CÁC LỰA CHỌN (Choices) --}}
     <div class="mb-4">
-        {{-- Nếu CÓ dữ liệu choices thì luôn luôn in ra, bất kể loại câu hỏi gì --}}
         @if (!empty($q['choices']))
-
-            {{-- (Tùy chọn) Thêm một cảnh báo nhẹ nếu đây là câu Tự luận (ES) mà lại có choices --}}
-            {{-- Nơi hiển thị các cảnh báo (Warnings) mà không chặn lưu --}}
-            @if (!empty($q['format_warnings']))
-                <div class="mb-4">
-                    @foreach ($q['format_warnings'] as $warning)
-                        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3 mb-2 rounded-r-lg">
-                            <div class="flex items-center text-yellow-700 text-sm">
-                                <i class="fa-solid fa-circle-info mr-2"></i>
-                                <strong>Lưu ý:</strong> {{ $warning }}
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
+            {{-- Cảnh báo cục bộ của choices (Ví dụ ES có choices) -> Vẫn giữ màu vàng --}}
+            @if (!empty($q['format_warnings']) && count($q['format_warnings']) > 0 && in_array(strtoupper($q['type'] ?? ''), ['ES']))
+                 {{-- Phần này đã được dời xuống khối warning chung phía dưới để hiển thị tập trung --}}
             @endif
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -147,12 +131,11 @@
                 @endforeach
             </div>
 
-            {{-- Nếu KHÔNG CÓ choices, thì CHỈ báo lỗi với các loại câu hỏi Trắc nghiệm (MC, TF, SA) --}}
         @elseif(!empty($q['type']) && in_array(strtoupper($q['type']), ['MC', 'TF', 'SA']))
-            <div class="bg-orange-50 border-l-4 border-orange-500 p-3 rounded-r-lg">
-                <div class="flex items-center text-orange-700 text-sm font-bold">
-                    <i class="fa-solid fa-triangle-exclamation mr-2"></i> Các lựa chọn đáp án (Choices): Nội dung này
-                    chưa được nhập hoặc không upload được
+            {{-- ĐÃ SỬA THÀNH MÀU ĐỎ (rose) --}}
+            <div class="bg-rose-50 border-l-4 border-rose-500 p-3 rounded-r-lg">
+                <div class="flex items-center text-rose-700 text-sm font-bold">
+                    <i class="fa-solid fa-triangle-exclamation mr-2"></i> Các lựa chọn đáp án (Choices): Nội dung này chưa được nhập hoặc không upload được
                 </div>
             </div>
         @endif
@@ -169,18 +152,32 @@
                 {!! $q['explanation'] !!}
             </div>
         @else
-            <div class="bg-orange-50 border-l-4 border-orange-500 p-3 rounded-r-lg">
-                <div class="flex items-center text-orange-700 text-sm font-bold">
-                    <i class="fa-solid fa-triangle-exclamation mr-2"></i> Lời giải (Explanation): Nội dung này chưa được
-                    nhập hoặc không upload được
+            {{-- CẢNH BÁO NHẸ -> VÀNG --}}
+            <div class="bg-amber-50 border-l-4 border-amber-500 p-3 rounded-r-lg">
+                <div class="flex items-center text-amber-700 text-sm font-bold">
+                    <i class="fa-solid fa-circle-info mr-2"></i> Lời giải (Explanation): Nội dung này chưa được nhập
                 </div>
             </div>
         @endif
     </div>
-</div>
 
-{{-- KHỐI 5: TỔNG KẾT TRẠNG THÁI LƯU --}}
-    <div class="mt-5">
+    {{-- KHỐI HIỂN THỊ CẢNH BÁO CHUNG TỪ BACKEND (WARNINGS) -> VÀNG --}}
+    @if (!empty($q['format_warnings']) && count($q['format_warnings']) > 0)
+        <div class="mt-5 bg-amber-50 border border-amber-200 border-l-4 border-l-amber-500 p-3 rounded shadow-sm">
+            <div class="flex items-center text-amber-800 text-sm font-bold mb-2">
+                <i class="fa-solid fa-triangle-exclamation text-lg mr-2"></i> 
+                Lưu ý / Cảnh báo (Hệ thống sẽ tự động xử lý):
+            </div>
+            <ul class="list-disc list-inside text-sm text-amber-700 space-y-1 ml-2">
+                @foreach($q['format_warnings'] as $warning)
+                    <li>{{ $warning }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    {{-- KHỐI 5: TỔNG KẾT TRẠNG THÁI LƯU --}}
+    <div class="mt-4">
         @if (!empty($q['is_ready_to_save']))
             {{-- Vượt qua cả 2 cửa -> Báo Xanh --}}
             <div class="bg-emerald-50 border border-emerald-200 border-l-4 border-l-emerald-500 p-3 rounded shadow-sm">
@@ -197,8 +194,10 @@
                     Trạng thái: Có lỗi. Câu hỏi này sẽ KHÔNG được ghi vào ngân hàng!
                 </div>
                 <div class="text-xs text-rose-600 mt-1 ml-7">
-                    * Vui lòng xem lại các thông báo báo lỗi (quyền hạn hoặc định dạng) ở phía trên để chỉnh sửa lại file Word.
+                    * Vui lòng xem lại các thông báo báo lỗi (màu đỏ) ở phía trên để chỉnh sửa lại file Word.
                 </div>
             </div>
         @endif
     </div>
+
+</div> {{-- KẾT THÚC THẺ DIV BAO BỌC KHUNG CÂU HỎI --}}

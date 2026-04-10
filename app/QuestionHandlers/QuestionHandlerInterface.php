@@ -28,4 +28,6 @@ interface QuestionHandlerInterface
     public function getDetails(Question $question): array;
     // Thêm dòng này vào cùng với các hàm validateData, store, update...
     public function destroy(Question $question): void;
+    // THÊM DÒNG NÀY: Kiểm tra dữ liệu
+    public function validateImportData(array $questionData): array;
 }

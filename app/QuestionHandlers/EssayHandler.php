@@ -7,7 +7,8 @@ use App\Services\ImageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-class EssayHandler implements QuestionHandlerInterface
+// SỬA DÒNG NÀY: extends BaseQuestionHandler
+class EssayHandler extends BaseQuestionHandler
 {
     protected ImageService $imageService;
 
@@ -77,9 +78,9 @@ class EssayHandler implements QuestionHandlerInterface
     {
         // 1. Xử lý bóc tách ảnh Base64 ra file vật lý
         $cleanStem = $this->imageService->localizeImages($specificData['stem']);
-        
-        $cleanExplanation = isset($specificData['explanation']) 
-                            ? $this->imageService->localizeImages($specificData['explanation']) 
+
+        $cleanExplanation = isset($specificData['explanation'])
+                            ? $this->imageService->localizeImages($specificData['explanation'])
                             : null;
 
         // 2. Gộp nội dung Đề bài vào mảng Dữ liệu chung
@@ -91,7 +92,7 @@ class EssayHandler implements QuestionHandlerInterface
         $question = Question::create($questionData);
 
         // 4. Tạo hướng dẫn chấm (Explanation) nếu có
-        if (!empty($cleanExplanation)) {
+        if (! empty($cleanExplanation)) {
             $question->explanation()->create([
                 'content' => $cleanExplanation,
             ]);
@@ -138,18 +139,18 @@ class EssayHandler implements QuestionHandlerInterface
     {
         // 1. Xử lý ảnh cho nội dung mới (ImageService sẽ tự lo việc không tải lại ảnh đã có)
         $cleanStem = $this->imageService->localizeImages($specificData['stem']);
-        
+
         // 2. Gộp nội dung Đề bài vào mảng Dữ liệu chung và Update
         $questionData = array_merge($commonData, [
             'stem' => $cleanStem,
         ]);
-        
+
         $question->update($questionData);
 
         // 3. Xử lý Lời giải
-        if (isset($specificData['explanation']) && !empty($specificData['explanation'])) {
+        if (isset($specificData['explanation']) && ! empty($specificData['explanation'])) {
             $cleanExplanation = $this->imageService->localizeImages($specificData['explanation']);
-            
+
             // Dùng updateOrCreate để: Có thì sửa, chưa có thì thêm mới
             $question->explanation()->updateOrCreate(
                 ['question_id' => $question->id],
@@ -164,17 +165,7 @@ class EssayHandler implements QuestionHandlerInterface
     /**
      * 4. Trả về cấu trúc dữ liệu chuẩn
      */
-    public function getDetails(Question $question): array
-    {
-        // Dùng $question->explanation thay vì $question->explanations()
-        $explanation = $question->explanation;
 
-        return [
-            'type' => 'es',
-            'stem' => $question->stem,
-            'explanation' => $explanation ? $explanation->content : null,
-        ];
-    }
 
     /**
      * 5. Xóa câu hỏi Tự luận và các dữ liệu liên quan
@@ -219,28 +210,54 @@ class EssayHandler implements QuestionHandlerInterface
     /**
      * Validate dữ liệu khi Import (từ mảng, không dùng Request)
      */
-    public function validateImportData(array $questionData): array
+    /**
+     * Validate dữ liệu khi Import (từ mảng, không dùng Request)
+     */
+    /**
+     * Validate dữ liệu khi Import (từ mảng, không dùng Request)
+     */
+
+    // -----------------------------------------------------------------------------
+    //
+    // CODE MỚI - KẾ THỪA TỪ BASEQUESTIONHANDLER (Có thể có thêm các hàm phụ trợ nếu cần)
+    // -----------------------------------------------------------------------------
+
+    // LƯU Ý: Các hàm dưới đây là phần "xương sống" đã được chuẩn hóa trong BaseQuestionHandler, các Handler con sẽ gọi lại để tận dụng chung logic và chỉ cần bổ sung phần riêng nếu có
+
+    /**
+     * Validate dữ liệu riêng cho câu hỏi Tự luận (ES)
+     */
+    protected function validateSpecificImportData(array $questionData): array
     {
-        $isValid = true;
-        $errors = [];
-        $warnings = []; // Thêm mảng chứa cảnh báo nhẹ
+        $warnings = [];
 
-        // 1. Kiểm tra lỗi bắt buộc (Ví dụ: Thiếu nội dung câu hỏi)
-        if (empty(trim(strip_tags($questionData['stem'] ?? '')))) {
-            $isValid = false;
-            $errors[] = 'Câu hỏi tự luận không được để trống nội dung (Stem).';
-        }
-
-        // 2. CẢNH BÁO: Nếu tự luận mà lại có Lựa chọn (Choices)
-        if (!empty($questionData['choices'])) {
-            // Ghi nhận cảnh báo nhưng KHÔNG đánh trượt (không đổi $isValid)
+        // Cảnh báo: Nếu tự luận mà lại có Lựa chọn (Choices)
+        if (! empty($questionData['choices'])) {
             $warnings[] = 'Phát hiện có Lựa chọn đáp án (Choices). Câu hỏi Tự luận (ES) không cần dữ liệu này, khi lưu câu hỏi vào hệ thống, phần này sẽ bị bỏ qua.';
         }
 
         return [
-            'is_valid' => $isValid,
-            'errors'   => $errors,
-            'warnings' => $warnings, // Trả về thêm nhãn warnings
+            'is_valid' => true, // Luôn true vì phần này chỉ có cảnh báo, không có lỗi đánh rớt
+            'errors' => [],   // Không có lỗi nghiêm trọng nào phát sinh từ phần riêng này
+            'warnings' => $warnings,
+        ];
+    }
+
+    /**
+     * Hàm dùng chung để lưu câu hỏi từ Form Bước 2 (Tự luận)
+     */
+    protected function storeSpecificImportData(Question $question, array $questionData): void
+    {
+        // dd($questionData); // Tạm thời dừng ở đây để kiểm tra dữ liệu câu hỏi trước khi lưu
+        // Tự luận không có choices, có thể bỏ qua hoặc lưu đáp án mẫu vào 1 bảng khác nếu có
+    }
+
+    /// Hàm dùng chung để lấy chi tiết câu hỏi khi Show hoặc Edit
+    protected function getSpecificDetails(Question $question): array
+    {
+        // Tự luận thường không có choices hay dữ liệu riêng phức tạp
+        return [
+            'choices' => [],
         ];
     }
 }

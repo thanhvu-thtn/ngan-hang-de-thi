@@ -11,12 +11,15 @@ use App\Models\QuestionType;
 use App\Models\Topic;
 use App\QuestionHandlers\EssayHandler;
 use App\QuestionHandlers\MultipleChoiceHandler;
+use App\QuestionHandlers\ShortAnswerHandler;
+use App\QuestionHandlers\TrueFalseHandler;
 use App\Services\ObjectivePermissionService;
 use App\Services\QuestionImportService;
 use App\Services\WordService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
@@ -208,33 +211,17 @@ class QuestionController extends Controller
 
     public function show($id)
     {
-        // 1. Lấy thông tin câu hỏi kèm theo loại câu hỏi
-        $question = Question::with('questionType')->findOrFail($id);
+        // 1. Tìm câu hỏi trong Database
+        $question = Question::findOrFail($id);
 
-        // 2. Kiểm tra nếu có Shared Context (Ngữ cảnh dùng chung)
-        if (! empty($question->shared_context_id)) {
-            /**
-             * PHẦN ẨN: Xử lý chuyển hướng sang SharedContextController
-             * return redirect()->route('shared_contexts.edit', $question->shared_context_id);
-             */
-
-            // Tạm thời báo lỗi hoặc xử lý khác nếu bạn chưa xây dựng SharedContextController
-            return back()->with('error', 'Câu hỏi này thuộc một ngữ cảnh dùng chung đang được phát triển.');
-        }
-
-        // 2. Lấy mã loại câu hỏi (Ví dụ: MC, TF, SA, ES)
-        $typeCode = strtoupper($question->questionType->code);
-
-        // 3. Xác định Controller đích dựa trên typeCode
-        $controllerClass = $this->getControllerByCode($typeCode);
-
-        if (! $controllerClass) {
-            return abort(404, "Không tìm thấy xử lý cho loại câu hỏi: {$typeCode}");
-        }
-
-        // 4. Gọi hàm show() của Controller đích và truyền $id
-        // Sử dụng app()->make để Laravel tự động Inject các Dependency nếu có
-        return app()->make($controllerClass)->show($id);
+        // 2. Xác định loại câu hỏi để gọi đúng "chuyên gia" (Handler) xử lý
+        $typeCode = $question->questionType->code;
+        $handler = $this->getHandlerByCode($typeCode);
+        // 3. Lấy toàn bộ "cỗ" đã được Handler dọn sẵn (dữ liệu chung + riêng)
+        $data = $handler->getDetails($question);
+        
+        // 4. Bưng lên giao diện Blade
+        return view('questions.show', compact('data'));
     }
 
     // Edit
@@ -429,9 +416,14 @@ class QuestionController extends Controller
             // 5. NHẠC TRƯỞNG RA TAY: Quét qua 2 cửa kiểm duyệt
             // Lấy User hiện tại đang đăng nhập truyền vào
             $structuredData = $importService->evaluateImportData($structuredData, auth()->user());
+            // =========================================================
+            // MỚI THÊM: TẠO UUID VÀ LƯU VÀO CACHE (REDIS)
+            // =========================================================
+            $importUuid = (string) Str::uuid();
+            Cache::put('import_data_'.$importUuid, $structuredData, now()->addHours(2));
 
-            // dd($structuredData);
-            return view('questions.preview', compact('structuredData'));
+            // Truyền thêm $importUuid sang giao diện
+            return view('questions.preview', compact('structuredData', 'importUuid'));
 
             // (Sau này ta sẽ return view('questions.preview') ở đây)
 
@@ -444,7 +436,30 @@ class QuestionController extends Controller
         }
     }
 
-    public function importData() {}
+    public function importData(Request $request, QuestionImportService $importService)
+    {
+        $uuid = $request->input('import_uuid');
+        
+        $structuredData = \Cache::pull('import_data_'.$uuid);
+
+        if (! $structuredData) {
+            return redirect()->route('questions.index')->with('error', 'Dữ liệu không tồn tại hoặc đã hết hạn.');
+        }
+
+        try {
+            // Gọi nhạc trưởng ra tay
+            
+            $totalSaved = $importService->saveStructuredData($structuredData, auth()->id());
+
+            return redirect()->route('questions.index')
+                ->with('success', "Đã import thành công {$totalSaved} câu hỏi vào ngân hàng!");
+
+        } catch (\Exception $e) {
+            \Log::error('Import Error: '.$e->getMessage());
+
+            return back()->with('error', 'Có lỗi xảy ra trong quá trình lưu dữ liệu: '.$e->getMessage());
+        }
+    }
 
     // ==========================================
     // CÁC HÀM HELPER DÙNG CHUNG TRONG CLASS
