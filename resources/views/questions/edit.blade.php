@@ -52,16 +52,18 @@
                                 class="text-rose-500">*</span></label>
                         <input type="text" name="tag_name" id="tag_name_input"
                             value="{{ old('tag_name', $question->tag_name) }}"
-                            class="w-full border-slate-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 font-semibold text-blue-700 bg-blue-50/50 text-lg py-2 px-[3px]"
-                            placeholder="Để trống hệ thống sẽ tự cấp mã...">
-                        <p id="tag_name_warning" class="text-sm text-rose-600 mt-1 hidden font-medium">Mã đã tồn tại!</p>
+                            class="w-full border-slate-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 font-semibold text-blue-700 bg-blue-50/50 text-sm py-2.5 px-3"
+                            placeholder="Mã định danh không được để trống...">
+                        <p id="tag_name_warning" class="text-sm text-rose-600 mt-1 hidden font-medium">Mã này đã tồn tại. Do
+                            đó, không thể lưu câu hỏi với mã này. Xin vui lòng chọn mã khác!</p>
                     </div>
 
                     {{-- Mức độ nhận thức --}}
                     <div>
                         <label class="block text-sm font-semibold text-slate-700 mb-1">Mức độ nhận thức <span
                                 class="text-rose-500">*</span></label>
-                        <select name="cognitive_level_id" class="w-full border-slate-300 rounded-xl shadow-sm">
+                        <select name="cognitive_level_id"
+                            class="w-full border-slate-300 rounded-xl shadow-sm py-2.5 text-sm px-[3px]">
                             @foreach (\App\Models\CognitiveLevel::all() as $level)
                                 <option value="{{ $level->id }}"
                                     {{ old('cognitive_level_id', $question->cognitive_level_id) == $level->id ? 'selected' : '' }}>
@@ -75,7 +77,7 @@
                         <label class="block text-sm font-semibold text-slate-700 mb-1">Trạng thái phê duyệt</label>
                         @can('tham-dinh-cau-hoi')
                             <select name="status"
-                                class="w-full border-amber-300 bg-amber-50 rounded-xl focus:ring-amber-500 shadow-sm">
+                                class="w-full border-amber-300 bg-amber-50 rounded-lg focus:ring-amber-500 shadow-sm px-[5pt]">
                                 <option value="0" {{ old('status', $question->status) == 0 ? 'selected' : '' }}>Chờ thẩm
                                     định</option>
                                 <option value="1" {{ old('status', $question->status) == 1 ? 'selected' : '' }}>Đã duyệt
@@ -103,7 +105,7 @@
                         @can('tham-dinh-cau-hoi')
                             <input type="number" step="0.1" name="difficulty_index"
                                 value="{{ old('difficulty_index', $question->difficulty_index) }}"
-                                class="w-full border-amber-300 bg-amber-50 rounded-xl shadow-sm">
+                                class="w-full border-amber-300 bg-amber-50 rounded-lg shadow-sm px-[5pt]">
                         @else
                             <div class="py-2.5 px-4 bg-slate-100 border border-slate-200 rounded-xl text-slate-600">
                                 {{ $question->difficulty_index ?? 'Chưa thiết lập' }}

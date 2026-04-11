@@ -120,4 +120,49 @@ class TrueFalseHandler extends BaseQuestionHandler
             'answer' => $choice ? $choice->content : 'Chưa có đáp án',
         ];
     }
+
+    /**
+     * LUẬT VALIDATE RIÊNG CHO FORM CẬP NHẬT ĐÚNG/SAI
+     */
+    protected function getSpecificUpdateRules(\Illuminate\Http\Request $request): array
+    {
+        return [
+            // Giả sử trên form Edit của bác, name của input radio là 'tf_answer' 
+            // và value gửi lên là 'Đúng' hoặc 'Sai'
+            'tf_answer' => 'required|string|in:Đúng,Sai',
+        ];
+    }
+
+    /**
+     * THÔNG BÁO LỖI RIÊNG 
+     */
+    protected function getSpecificUpdateMessages(): array
+    {
+        return [
+            'tf_answer.required' => 'Vui lòng chọn đáp án Đúng hoặc Sai cho câu hỏi.',
+            'tf_answer.in'       => 'Đáp án chỉ được phép là Đúng hoặc Sai.',
+        ];
+    }
+
+    /**
+     * Cập nhật dữ liệu riêng cho câu hỏi Đúng/Sai
+     */
+    protected function updateSpecificData(Question $question, array $validatedData): void
+    {
+        // Câu hỏi Đúng/Sai (TF) chỉ có 1 record trong bảng choices để chứa đáp án
+        $choice = $question->choices()->first();
+
+        if ($choice) {
+            $choice->update([
+                'content' => $validatedData['tf_answer']
+            ]);
+        } else {
+            // Đề phòng trường hợp trước đó DB bị lỗi mất data, tự động tạo lại
+            $question->choices()->create([
+                'content'    => $validatedData['tf_answer'],
+                'is_correct' => true,
+                'order'      => 1,
+            ]);
+        }
+    }
 }

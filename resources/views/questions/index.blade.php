@@ -110,111 +110,135 @@
             @if ($isFiltering)
                 {{-- Đã bấm lọc: Hiện bảng câu hỏi --}}
                 {{-- KHU VỰC BẢNG DỮ LIỆU --}}
-        @if (!$hasNoAssignedTopics)
-            @if ($questions->isEmpty())
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center">
-                    <div class="w-16 h-16 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
-                        <i class="fa-solid fa-inbox"></i>
-                    </div>
-                    <h3 class="text-lg font-medium text-slate-800 mb-1">Không tìm thấy câu hỏi nào</h3>
-                    <p class="text-slate-500">Chưa có câu hỏi nào thuộc bộ lọc này.</p>
-                </div>
-            @else
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead class="bg-slate-50/80 border-b border-slate-200">
-                                <tr>
-                                    <th class="px-5 py-4 text-left text-sm font-semibold text-slate-600">Mã định danh</th>
-                                    <th class="px-5 py-4 text-left text-sm font-semibold text-slate-600">Mô tả / Câu hỏi</th>
-                                    {{-- CỘT MỚI: LOẠI --}}
-                                    <th class="px-5 py-4 text-center text-sm font-semibold text-slate-600">Loại</th>
-                                    <th class="px-5 py-4 text-center text-sm font-semibold text-slate-600">Mức độ</th>
-                                    <th class="px-5 py-4 text-center text-sm font-semibold text-slate-600">Trạng thái</th>
-                                    <th class="px-5 py-4 text-right text-sm font-semibold text-slate-600">Thao tác</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-100">
-                                @foreach ($questions as $q)
-                                    <tr class="hover:bg-slate-50/50 transition-colors">
-                                        {{-- 1. Mã định danh --}}
-                                        <td class="px-5 py-4 align-top text-sm text-slate-800 font-medium whitespace-nowrap">
-                                            {{-- Cắt hiển thị 8 ký tự, rê chuột vào sẽ thấy toàn bộ --}}
-                                            <span title="{{ $q->tag_name }} cursor-help">
-                                                {{ \Illuminate\Support\Str::limit($q->tag_name, 8, '...') }}
-                                            </span>
-                                            @if($q->shared_context_id)
-                                                <div class="mt-1 text-xs text-indigo-600 italic">Có dữ liệu chung</div>
-                                            @endif
-                                        </td>
+                @if (!$hasNoAssignedTopics)
+                    @if ($questions->isEmpty())
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center">
+                            <div
+                                class="w-16 h-16 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                                <i class="fa-solid fa-inbox"></i>
+                            </div>
+                            <h3 class="text-lg font-medium text-slate-800 mb-1">Không tìm thấy câu hỏi nào</h3>
+                            <p class="text-slate-500">Chưa có câu hỏi nào thuộc bộ lọc này.</p>
+                        </div>
+                    @else
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead class="bg-slate-50/80 border-b border-slate-200">
+                                        <tr>
+                                            <th class="px-5 py-4 text-left text-sm font-semibold text-slate-600">Mã định
+                                                danh</th>
+                                            <th class="px-5 py-4 text-left text-sm font-semibold text-slate-600">Mô tả / Câu
+                                                hỏi</th>
+                                            {{-- CỘT MỚI: LOẠI --}}
+                                            <th class="px-5 py-4 text-center text-sm font-semibold text-slate-600">Loại</th>
+                                            <th class="px-5 py-4 text-center text-sm font-semibold text-slate-600">Mức độ
+                                            </th>
+                                            <th class="px-5 py-4 text-center text-sm font-semibold text-slate-600">Trạng
+                                                thái</th>
+                                            <th class="px-5 py-4 text-right text-sm font-semibold text-slate-600">Thao tác
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100">
+                                        @foreach ($questions as $q)
+                                            <tr class="hover:bg-slate-50/50 transition-colors">
+                                                {{-- 1. Mã định danh --}}
+                                                <td
+                                                    class="px-5 py-4 align-top text-sm text-slate-800 font-medium whitespace-nowrap">
+                                                    {{-- Cắt hiển thị 8 ký tự, rê chuột vào sẽ thấy toàn bộ --}}
+                                                    <span title="{{ $q->tag_name }} cursor-help">
+                                                        {{ \Illuminate\Support\Str::limit($q->tag_name, 8, '...') }}
+                                                    </span>
+                                                    @if ($q->shared_context_id)
+                                                        <div class="mt-1 text-xs text-indigo-600 italic">Có dữ liệu chung
+                                                        </div>
+                                                    @endif
+                                                </td>
 
-                                        {{-- 2. Mô tả / Câu hỏi --}}
-                                        <td class="px-5 py-4 align-top">
-                                            {{-- Gộp name và stem vào title để khi hover xem được full --}}
-                                            <div title="{{ $q->name ? $q->name . ' - ' : '' }}{{ strip_tags($q->stem) }}">
-                                                @if ($q->name)
-                                                    <div class="text-sm font-medium text-slate-800 mb-1 format-katex line-clamp-1">
-                                                        {{ $q->name }}
+                                                {{-- 2. Mô tả / Câu hỏi --}}
+                                                <td class="px-5 py-4 align-top">
+                                                    {{-- Gộp name và stem vào title để khi hover xem được full --}}
+                                                    <div
+                                                        title="{{ $q->name ? $q->name . ' - ' : '' }}{{ strip_tags($q->stem) }}">
+                                                        @if ($q->name)
+                                                            <div
+                                                                class="text-sm font-medium text-slate-800 mb-1 format-katex line-clamp-1">
+                                                                {{ $q->name }}
+                                                            </div>
+                                                        @endif
+
                                                     </div>
-                                                @endif
-                                        
-                                            </div>
-                                            
-                                
-                                        </td>
 
-                                        {{-- 3. CỘT MỚI: Loại (MC, TF, SA, ES...) --}}
-                                        <td class="px-5 py-4 align-top text-center text-sm text-slate-800 font-semibold">
-                                            {{ $q->questionType->code ?? '-' }}
-                                        </td>
 
-                                        {{-- 4. Mức độ (Text bình thường) --}}
-                                        <td class="px-5 py-4 align-top text-center text-sm text-slate-700">
-                                            {{ $q->cognitiveLevel->name ?? '-' }}
-                                        </td>
+                                                </td>
 
-                                        {{-- 5. Trạng thái (Giữ nguyên thẻ label màu xanh/vàng do tính chất status cần nổi bật) --}}
-                                        <td class="px-5 py-4 align-top text-center">
-                                            @if ($q->status === 'approved')
-                                                <span class="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-semibold bg-emerald-100 text-emerald-700">
-                                                    Đã duyệt
-                                                </span>
-                                            @else
-                                                <span class="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-semibold bg-amber-100 text-amber-700">
-                                                    Chờ duyệt
-                                                </span>
-                                            @endif
-                                        </td>
+                                                {{-- 3. CỘT MỚI: Loại (MC, TF, SA, ES...) --}}
+                                                <td
+                                                    class="px-5 py-4 align-top text-center text-sm text-slate-800 font-semibold">
+                                                    {{ $q->questionType->code ?? '-' }}
+                                                </td>
 
-                                        {{-- 6. Thao tác (Giữ nguyên) --}}
-                                        <td class="px-5 py-4 align-top text-right whitespace-nowrap">
-                                            <div class="flex items-center justify-end gap-2">
-                                                <a href="{{ route('questions.show', $q->id) }}" class="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Xem chi tiết">
-                                                    <i class="fa-solid fa-eye"></i>
-                                                </a>
-                                                <a href="{{ route('questions.edit',$q->id) }}" class="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="Sửa câu hỏi">
-                                                    <i class="fa-solid fa-pen-to-square"></i>
-                                                </a>
-                                                <button type="button" class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" title="Xóa">
-                                                    <i class="fa-solid fa-trash-can"></i>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    {{-- Phân trang --}}
-                    @if ($questions->hasPages())
-                        <div class="px-5 py-4 border-t border-slate-200 bg-slate-50">
-                            {{ $questions->links() }}
+                                                {{-- 4. Mức độ (Text bình thường) --}}
+                                                <td class="px-5 py-4 align-top text-center text-sm text-slate-700">
+                                                    {{ $q->cognitiveLevel->name ?? '-' }}
+                                                </td>
+
+                                                {{-- 5. Trạng thái (Giữ nguyên thẻ label màu xanh/vàng do tính chất status cần nổi bật) --}}
+                                                <td class="px-5 py-4 align-top text-center">
+                                                    @if ($q->status == 1)
+                                                        <span
+                                                            class="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-semibold bg-emerald-100 text-emerald-700">
+                                                            Đã duyệt
+                                                        </span>
+                                                    @elseif ($q->status == 2)
+                                                        <span
+                                                            class="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-semibold bg-rose-100 text-rose-700">
+                                                            Soạn lại
+                                                        </span>
+                                                    @else
+                                                        <span
+                                                            class="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-semibold bg-amber-100 text-amber-700">
+                                                            Chờ duyệt
+                                                        </span>
+                                                    @endif
+                                                </td>
+
+                                                {{-- 6. Thao tác (Giữ nguyên) --}}
+                                                <td class="px-5 py-4 align-top text-right whitespace-nowrap">
+                                                    <div class="flex items-center justify-end gap-2">
+                                                        <a href="{{ route('questions.show', $q->id) }}"
+                                                            class="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                            title="Xem chi tiết">
+                                                            <i class="fa-solid fa-eye"></i>
+                                                        </a>
+                                                        <a href="{{ route('questions.edit', $q->id) }}"
+                                                            class="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                                                            title="Sửa câu hỏi">
+                                                            <i class="fa-solid fa-pen-to-square"></i>
+                                                        </a>
+                                                        <a href="{{ route('questions.delete', $q->id) }}"
+                                                            class="inline-block p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                                                            title="Xóa">
+                                                            <i class="fa-solid fa-trash-can"></i>
+                                                        </a>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {{-- Phân trang --}}
+                            @if ($questions->hasPages())
+                                <div class="px-5 py-4 border-t border-slate-200 bg-slate-50">
+                                    {{ $questions->links() }}
+                                </div>
+                            @endif
                         </div>
                     @endif
-                </div>
-            @endif
-        @endif
+                @endif
             @else
                 {{-- Chưa bấm lọc: Màn hình chờ mặc định --}}
                 <div

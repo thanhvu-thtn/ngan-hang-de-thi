@@ -10,15 +10,15 @@ use Illuminate\Support\Facades\DB;
 // SỬA DÒNG NÀY: extends BaseQuestionHandler
 class EssayHandler extends BaseQuestionHandler
 {
-    protected ImageService $imageService;
+    //protected ImageService $imageService;
 
     /**
      * Inject ImageService để xử lý ảnh trong nội dung TinyMCE
      */
-    public function __construct(ImageService $imageService)
+   /*  public function __construct(ImageService $imageService)
     {
         $this->imageService = $imageService;
-    }
+    } */
 
     /**
      * 1. Validate dữ liệu gửi lên từ Form Bước 2 (Tự luận)
@@ -259,5 +259,17 @@ class EssayHandler extends BaseQuestionHandler
         return [
             'choices' => [],
         ];
+    }
+
+    protected function getSpecificUpdateRules(\Illuminate\Http\Request $request): array {
+        return [];
+    }
+    protected function getSpecificUpdateMessages(): array {
+        return [];
+    }
+
+    protected function updateSpecificData(Question $question, array $validatedData): void
+    {
+        // Chưa có logic update cụ thể cho loại này, để trống tạm thời
     }
 }

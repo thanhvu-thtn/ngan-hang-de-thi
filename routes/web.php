@@ -145,6 +145,7 @@ Route::middleware('auth')->group(function () {
         // =========================================================================
         // Thêm dòng này để gọi giao diện AJAX
         Route::get('questions/get-partial/{type_code}', [QuestionController::class, 'getPartial'])->name('questions.getPartial');
+        Route::get('questions/{id}/delete', [QuestionController::class, 'delete'])->name('questions.delete');
         Route::get('questions/check-tag-name', [QuestionController::class, 'checkTagName'])->name('questions.check_tag_name');
         Route::resource('questions', QuestionController::class)
             ->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy'])

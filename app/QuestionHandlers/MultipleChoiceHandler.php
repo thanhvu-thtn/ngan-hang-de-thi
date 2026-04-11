@@ -103,6 +103,7 @@ class MultipleChoiceHandler extends BaseQuestionHandler
     {
         // Load các lựa chọn của câu hỏi MC
         return [
+            'layout_id' => $question->layout_id,
             'choices' => $question->choices()->orderBy('order')->get()->map(function ($choice) {
                 return [
                     'id' => $choice->id,
@@ -113,5 +114,74 @@ class MultipleChoiceHandler extends BaseQuestionHandler
                 ];
             })->toArray(),
         ];
+    }
+
+    /**
+     * LUẬT VALIDATE RIÊNG CHO FORM CẬP NHẬT TRẮC NGHIỆM
+     */
+    protected function getSpecificUpdateRules(\Illuminate\Http\Request $request): array
+    {
+        return [
+            'choices'             => 'required|array|min:2', // Phải có ít nhất 2 phương án
+            'choices.*.content'   => 'required|string',      // Từng phương án không được rỗng
+            'choices.*.ratio'     => 'required|numeric|min:0.2|max:1.0', // Tỷ lệ điểm 0-100
+            'correct_choice'      => 'required|numeric',     // Phải có 1 nút radio được tick
+            'layout_id' => 'required|exists:question_layouts,id',
+        ];
+    }
+
+    /**
+     * THÔNG BÁO LỖI RIÊNG
+     */
+    protected function getSpecificUpdateMessages(): array
+    {
+        return [
+            'choices.required'           => 'Danh sách phương án không hợp lệ.',
+            'choices.min'                => 'Câu hỏi trắc nghiệm phải có ít nhất 2 phương án.',
+            'choices.*.content.required' => 'Nội dung của các phương án không được để trống.',
+            'layout_id.required'         => 'Vui lòng chọn một bố cục cho câu hỏi.',
+            'layout_id.exists'           => 'Bố cục được chọn không hợp lệ.',
+
+            'choices.*.ratio.required'   => 'Vui lòng nhập tỷ lệ chiều ngang cho phương án.',
+            'choices.*.ratio.numeric'    => 'Tỷ lệ chiều ngang phải là một con số.',
+            'choices.*.ratio.min'        => 'Tỷ lệ chiều ngang không được nhỏ hơn 0.2.',
+            'choices.*.ratio.max'        => 'Tỷ lệ chiều ngang không được vượt quá 1.0.',
+            'correct_choice.required'    => 'Vui lòng chọn một phương án làm đáp án đúng.',
+        ];
+    }
+
+    /**
+     * Cập nhật dữ liệu riêng cho câu hỏi Nhiều lựa chọn
+     */
+    protected function updateSpecificData(Question $question, array $validatedData): void
+    {
+        if (isset($validatedData['layout_id'])) {
+            $question->layout_id = $validatedData['layout_id'];
+            $question->save();
+        }
+        
+        $correctChoiceIndex = $validatedData['correct_choice']; 
+        
+        // 1. Lấy danh sách các phương án cũ đang có trong DB (sắp xếp theo ID cũ để đảm bảo đúng thứ tự)
+        // Dùng values() để reset lại key của mảng (thành 0, 1, 2, 3...) cho khớp với index từ Form
+        $existingChoices = $question->choices()->orderBy('id')->get()->values();
+
+        // 2. Duyệt qua mảng dữ liệu mới gửi lên từ form
+        foreach ($validatedData['choices'] as $index => $choiceData) {
+            
+            $isCorrect = ($index == $correctChoiceIndex);
+
+            $updateData = [
+                'content'    => $choiceData['content'],
+                'ratio'      => $choiceData['ratio'] ?? 1.0,
+                'is_correct' => $isCorrect,
+            ];
+
+            // 3. Đắp dữ liệu mới vào phương án cũ tương ứng (Dựa theo thứ tự)
+            if (isset($existingChoices[$index])) {
+                $existingChoices[$index]->update($updateData);
+            } 
+            // KHÔNG CÓ LỆNH CREATE NÀO Ở ĐÂY CẢ, CẮT ĐỨT HOÀN TOÀN KHẢ NĂNG ĐẺ THÊM RÁC!
+        }
     }
 }

@@ -127,4 +127,50 @@ class ShortAnswerHandler extends BaseQuestionHandler
             'order' => 1,
         ]);
     }
+
+    /**
+     * LUẬT VALIDATE RIÊNG CHO FORM CẬP NHẬT TRẢ LỜI NGẮN
+     */
+    protected function getSpecificUpdateRules(\Illuminate\Http\Request $request): array
+    {
+        return [
+            'sa_answer' => [
+                'required',
+                'string',
+                'max:4',
+                'regex:/^-?[0-9]+(,[0-9]+)?$/' // Phải là số, có thể có dấu âm, có tối đa 1 dấu phẩy
+            ],
+        ];
+    }
+
+    /**
+     * THÔNG BÁO LỖI RIÊNG 
+     */
+    protected function getSpecificUpdateMessages(): array
+    {
+        return [
+            'sa_answer.required' => 'Vui lòng nhập đáp án chính xác cho câu hỏi.',
+            'sa_answer.max'      => 'Đáp án chỉ được chứa tối đa 4 ký tự.',
+            'sa_answer.regex'    => 'Đáp án không đúng định dạng (chỉ chứa số, dấu trừ ở đầu và tối đa 1 dấu phẩy).',
+        ];
+    }
+
+    protected function updateSpecificData(Question $question, array $validatedData): void
+    {
+        // Trả lời ngắn (SA) luôn chỉ có 1 record trong bảng choices để chứa đáp án
+        $choice = $question->choices()->first();
+
+        if ($choice) {
+            $choice->update([
+                'content' => $validatedData['sa_answer']
+            ]);
+        } else {
+            // Đề phòng trường hợp trước đó bị lỗi mất data, tự động tạo lại
+            $question->choices()->create([
+                'content'    => $validatedData['sa_answer'],
+                'is_correct' => true,
+                'order'      => 1,
+            ]);
+        }
+    }
 }

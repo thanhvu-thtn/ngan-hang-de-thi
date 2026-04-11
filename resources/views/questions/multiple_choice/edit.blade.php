@@ -74,9 +74,9 @@
                                     chiều ngang màn hình (%):</label>
                                 <input type="number" id="ratio-{{ $index }}"
                                     name="choices[{{ $index }}][ratio]"
-                                    value="{{ old("choices.{$index}.ratio", $choice['ratio'] ?? ($choice['is_correct'] ? 100 : 0)) }}"
+                                    value="{{ old("choices.{$index}.ratio", $choice['ratio'] ?? ($choice['is_correct'] ? 1 : 0)) }}"
                                     class="w-20 text-sm border-slate-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-1.5 text-center font-semibold text-slate-700"
-                                    min="0" max="100" step="1">
+                                    min="0" max="100" step="0.1">
                             </div>
 
                         </div>
@@ -85,23 +85,45 @@
             </div>
         </div>
 
-        {{-- KHUNG 3: LỜI GIẢI (EXPLANATION) --}}
+        {{-- KHUNG 3: CẤU HÌNH HIỂN THỊ (LAYOUT) - MỚI THÊM --}}
+        <div>
+            <div class="flex justify-between items-end mb-2">
+                <label for="layout_id" class="block text-sm font-semibold text-slate-700">
+                    Cấu hình hiển thị đáp án (Layout) <span class="text-rose-500">*</span>
+                </label>
+            </div>
+            <select id="layout_id" name="layout_id" 
+                class="w-full md:w-1/2 border-slate-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 font-medium text-slate-700 transition-colors cursor-pointer">
+                <option value="">-- Chọn cách bố trí (Ví dụ: 1x4, 2x2) --</option>
+                {{-- Giả định bác truyền biến $layouts từ Controller xuống --}}
+                @isset($layouts)
+                    @foreach ($layouts as $layout)
+                        <option value="{{ $layout->id }}" 
+                            {{ old('layout_id', $data['layout_id'] ?? '') == $layout->id ? 'selected' : '' }}>
+                            {{ $layout->name }} ({{ $layout->code }})
+                        </option>
+                    @endforeach
+                @endisset
+            </select>
+        </div>
+
+        {{-- KHUNG 4: LỜI GIẢI (EXPLANATION) --}}
         <div>
             <div class="flex justify-between items-end mb-2">
                 <label class="block text-sm font-semibold text-slate-700">Lời giải chi tiết</label>
             </div>
             <div class="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                <div class="flex justify-between items-center mb-2">
+                <div class="flex justify-between items-center mb-2 bg-slate-50 border-b border-slate-200 px-4 py-2">
                     <label class="block text-sm font-semibold text-slate-700">
                         Lời giải / Hướng dẫn chấm
                     </label>
-                    {{-- NÚT XEM TRƯỚC LỜI GIẢI (Đã được canh phải nhờ justify-between) --}}
+                    {{-- NÚT XEM TRƯỚC LỜI GIẢI --}}
                     <button type="button" onclick="window.previewContent('editor-explanation')"
                         class="text-xs px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition border border-blue-200 flex items-center gap-1 shadow-sm font-medium">
                         <i class="fa-solid fa-eye"></i> Preview
                     </button>
                 </div>
-                <textarea id="editor-explanation" name="explanation" class="w-full border-0 focus:ring-0" rows="4">{!! old('explanation', $data['explanation'] ?? '') !!}</textarea>
+                <textarea id="editor-explanation" name="explanation" class="w-full border-0 focus:ring-0 p-3" rows="4">{!! old('explanation', $data['explanation'] ?? '') !!}</textarea>
             </div>
         </div>
     </div>

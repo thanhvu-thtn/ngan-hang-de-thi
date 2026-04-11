@@ -4,11 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreQuestionRequest;
 use App\Http\Requests\StoreQuestionSetupRequest;
-use App\Http\Requests\UpdateQuestionRequest;
 use App\Models\CognitiveLevel;
 use App\Models\Question;
 use App\Models\QuestionType;
 use App\Models\Topic;
+use App\Models\QuestionLayout;
 use App\QuestionHandlers\EssayHandler;
 use App\QuestionHandlers\MultipleChoiceHandler;
 use App\QuestionHandlers\ShortAnswerHandler;
@@ -230,31 +230,31 @@ class QuestionController extends Controller
         try {
             // 1. Tìm câu hỏi theo ID, load sẵn các quan hệ để tránh N+1
             $question = Question::with(['questionType', 'objectives', 'cognitiveLevel'])
-                                ->findOrFail($id);
+                ->findOrFail($id);
 
             $user = auth()->user();
 
             // --- KIỂM TRA 1: Quyền sửa câu hỏi đã thẩm định ---
             // Trạng thái 'approved' (đã thẩm định) thì phải có quyền 'tham-dinh-cau-hoi' mới được sửa
-            if ($question->status === 'approved' && !$user->can('tham-dinh-cau-hoi')) {
-                return redirect()->route('questions.index')
-                    ->with('error', 'Câu hỏi đã được thẩm định, bạn không có quyền sửa.');
+            if ($question->status == 1 && ! $user->can('tham-dinh-cau-hoi')) {
+                return back()
+                    ->with('error', 'Câu hỏi này đã được thẩm định, bạn không có quyền sửa.');
             }
 
             // --- KIỂM TRA 2: Quyền theo phân công Chuyên đề (Topic) ---
             $objectiveCodes = $question->objectives->pluck('tag_name')->toArray();
-            
+
             // Sử dụng Service kiểm tra xem User có quản lý các mã Chuẩn đầu ra này không
             $permissionCheck = $this->permissionService->verifyObjectivePermissions($objectiveCodes, $user);
-            
-            if (!$permissionCheck['is_valid']) {
+
+            if (! $permissionCheck['is_valid']) {
                 return redirect()->route('questions.index')
                     ->with('error', 'Câu hỏi không có quyền sửa (nằm ngoài chuyên đề được phân công).');
             }
 
             // --- LẤY DỮ LIỆU CHI TIẾT QUA HANDLER ---
             $typeCode = $question->questionType->code ?? null;
-            if (!$typeCode) {
+            if (! $typeCode) {
                 return back()->with('error', 'Không xác định được loại câu hỏi.');
             }
 
@@ -263,20 +263,22 @@ class QuestionController extends Controller
 
             // --- LẤY MASTER DATA CHO DROPDOWNS ---
             $cognitiveLevels = CognitiveLevel::all();
+            $layouts = QuestionLayout::all();
             $treeByGrade = $this->permissionService->getAllowedObjectiveTree($user, false);
             // BỔ SUNG DÒNG NÀY: Trích xuất mảng ID chuẩn đầu ra từ $data để truyền ra Blade
             $selectedObjectiveIds = $data['objective_ids'] ?? [];
 
             // Trả về view với đầy đủ biến (nhớ thêm 'selectedObjectiveIds' vào compact)
             return view('questions.edit', compact(
-                'question', 
-                'data', 
-                'cognitiveLevels', 
-                'treeByGrade', 
+                'question',
+                'data',
+                'cognitiveLevels',
+                'layouts',
+                'treeByGrade',
                 'selectedObjectiveIds'
             ));
 
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException $e) {
             // Trường hợp ID không tồn tại trong database
             return redirect()->route('questions.index')
                 ->with('error', 'Không tìm thấy câu hỏi yêu cầu.');
@@ -290,97 +292,93 @@ class QuestionController extends Controller
     /**
      * Cập nhật thiết lập cơ bản và điều hướng sang trang sửa chi tiết
      */
-    public function update(UpdateQuestionRequest $request, Question $question)
+    /**
+     * Cập nhật câu hỏi
+     */
+    public function update(Request $request, Question $question)
     {
-        $validatedData = $request->validated();
+        // 1. Lấy mã loại câu hỏi (MC, SA, TF, ES...)
+        $typeCode = $question->questionType->code;
 
-        DB::beginTransaction();
+        // 2. Gọi Handler tương ứng
+        $handler = $this->getHandlerByCode($typeCode);
 
-        try {
-            // 1. Đóng gói phần CHUNG cơ bản
-            $commonData = [
-                'tag_name' => $validatedData['tag_name'],
-                'name' => $validatedData['name'],
-                'cognitive_level_id' => $validatedData['cognitive_level_id'],
-            ];
+        // 3. Chạy Validate (tự động gộp chung + riêng)
+        // Nếu lỗi, Laravel tự động quay lại form và báo chữ đỏ. Nếu pass, trả về mảng data sạch.
+        $validatedData = $handler->validateUpdateRequest($request, $question);
 
-            // 2. Xử lý logic RIÊNG cho người có quyền Thẩm định
-            if (auth()->user()->can('tham-dinh-cau-hoi')) {
-                $commonData['status'] = $validatedData['status'];
-                $commonData['difficulty_index'] = $validatedData['difficulty_index'] ?? $question->difficulty_index;
+        // 4. Nhờ Handler tiến hành cập nhật vào Database
+        // (Chúng ta sẽ xây dựng hàm này ngay sau đây)
+        $handler->updateQuestionData($question, $validatedData);
 
-                // Nếu người này đổi trạng thái thành 1 (Duyệt), ghi nhận checker_id là người đó
-                if ($validatedData['status'] == 1 && $question->status != 1) {
-                    $commonData['checker_id'] = auth()->id();
-                }
-            }
-
-            // 3. Gọi Handler xử lý phần RIÊNG (bóc ảnh mới nếu có) và UPDATE vào DB
-            $handler = $this->getHandlerByCode($validatedData['type_code']);
-            $handler->updateQuestion($question, $commonData, $validatedData);
-
-            // 4. Cập nhật Mục tiêu kiến thức (Dùng sync để tự xóa cũ, thêm mới)
-            $question->objectives()->sync($validatedData['objective_ids']);
-
-            DB::commit();
-
-            return redirect()->route('questions.index')->with('success', 'Đã cập nhật câu hỏi thành công!');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-
-            return back()->with('error', 'Có lỗi xảy ra khi cập nhật: '.$e->getMessage())->withInput();
-        }
+        // 5. Thành công thì báo cáo và quay về
+        return redirect()->back()->with('success', 'Cập nhật câu hỏi thành công!');
     }
 
     // Xoá câu hỏi
-    public function destroy($id)
+    /**
+     * Hiển thị màn hình xác nhận trước khi xóa
+     */
+    public function delete($id)
     {
-        // dd($id);
+        // 1. Tự tìm câu hỏi trong Database bằng ID (nếu không có sẽ tự văng lỗi 404)
+        $question = Question::findOrFail($id);
+
+        // Kiểm tra xem câu hỏi có bị mất liên kết loại câu hỏi không
+        if (! $question->questionType) {
+            return back()->with('error', 'Câu hỏi này bị lỗi dữ liệu (không xác định được loại câu hỏi), không thể thực hiện thao tác.');
+        }
+
+        // Lấy Handler tương ứng với loại câu hỏi
+        $handler = $this->getHandlerByCode($question->questionType->code);
+
+        // 2. Kiểm tra quyền xóa (gọi xuống Handler)
+        $errorMsg = $handler->checkDeletePermission($question, auth()->user());
+
+        // Nếu có lỗi (bị chặn ở 1 trong 3 cửa) -> Bật ngược lại kèm thông báo
+        if ($errorMsg) {
+            return back()->with('error', $errorMsg);
+        }
+
+        // 3. Nếu qua ải, lấy chi tiết câu hỏi (load các quan hệ cần thiết để view hiển thị)
+        $question->load(['objectives', 'choices', 'questionType', 'cognitiveLevel']);
+
+        // 4. Trả về màn hình confirm
+        //dd($question); // Tạm thời dừng ở đây để kiểm tra dữ liệu câu hỏi trước khi hi
+        return view('questions.confirm_delete', compact('question'));
+    }
+
+    public function destroy(Request $request, $id)
+    {
         try {
-            // 1. Tìm câu hỏi theo ID, nếu không có sẽ quăng lỗi ModelNotFoundException
-            $question = Question::with(['explanation', 'objectives'])->findOrFail($id);
+            // 1. Tìm câu hỏi
+            $question = Question::findOrFail($id);
 
-            // CHỐT CHẶN 1: Nếu câu hỏi đã duyệt (status = 1) VÀ user KHÔNG có quyền thẩm định -> Cấm cửa!
-            /* if ($question->status == 1 && ! auth()->user()->can('tham-dinh-cau-hoi')) {
-                return redirect()->route('questions.index')
-                    ->with('error', 'Câu hỏi này đã được thẩm định và phê duyệt. Bạn không có quyền chỉnh sửa!');
-            } */
+            // 2. Lấy bộ xử lý (Handler) tương ứng với loại câu hỏi
+            $handler = $this->getHandlerByCode($question->questionType->code);
 
-            // CHỐT CHẶN 1: Nếu câu hỏi đã duyệt (status = 1) VÀ user KHÔNG có quyền thẩm định -> Cấm cửa!
-            if ($question->status == 1 && ! auth()->user()->can('tham-dinh-cau-hoi')) {
-                return back(fallback: route('questions.index'))
-                    ->with('error', 'Câu hỏi này đã được thẩm định và phê duyệt. Bạn không có quyền xoá!');
-            }
-            // dd($question);
-            // KIỂM TRA SHARED CONTEXT CHẶN XÓA
-            if (! empty($question->shared_context_id)) {
+            // 3. Verify quyền lần cuối (Cửa bảo vệ an toàn nhỡ ai đó gửi Request Fake)
+            $errorMsg = $handler->checkDeletePermission($question, auth()->user());
+            
+            if ($errorMsg) {
+                // Nếu không có quyền, đá văng về trang index kèm thông báo lỗi
                 return redirect()->route('questions.index')
-                    ->with('error', 'Câu hỏi này thuộc cụm dữ liệu dùng chung (Shared Context) nên không thể xóa trực tiếp ở đây. (Tính năng quản lý cụm sẽ được cập nhật sau).');
+                                 ->with('error', $errorMsg);
             }
 
-            // 2. Lấy mã loại câu hỏi (Giả sử bạn liên kết qua bảng question_types)
-            $typeCode = $question->questionType->code; // VD: 'ES', 'MC', 'TF'...
-            // dd($typeCode);
-            // 3. Tìm Handler tương ứng
-            $handler = $this->getHandlerByCode($typeCode);
-            // dd($handler);
-            // 4. Ủy quyền cho Handler xử lý việc xóa (Truyền object vào cho Handler dễ làm việc)
-            $handler->destroy($question);
+            // 4. Gọi Handler dọn dẹp toàn bộ dữ liệu
+            $handler->deleteQuestionData($question);
 
-            // return redirect()->route('questions.index')
-            //    ->with('success', 'Đã xóa câu hỏi thành công!');
-            return back(fallback: route('questions.index'))
-                ->with('success', 'Đã xóa câu hỏi thành công!');
-
-        } catch (ModelNotFoundException $e) {
-            // Xử lý riêng khi không tìm thấy ID
+            // 5. Xóa thành công, quay về danh sách
             return redirect()->route('questions.index')
-                ->with('error', 'Không tìm thấy dữ liệu câu hỏi này để xóa!');
+                             ->with('success', 'Đã xóa câu hỏi và các dữ liệu liên quan thành công!');
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return redirect()->route('questions.index')->with('error', 'Không tìm thấy câu hỏi này trong hệ thống.');
+            
         } catch (\Exception $e) {
-            // Bắt các lỗi khác (ví dụ lỗi DB, lỗi xóa file...)
-            return redirect()->route('questions.index')
-                ->with('error', 'Có lỗi xảy ra khi xóa câu hỏi: '.$e->getMessage());
+            \Illuminate\Support\Facades\Log::error('Lỗi khi xóa câu hỏi ID ' . $id . ': ' . $e->getMessage());
+            return redirect()->route('questions.index')->with('error', 'Có lỗi hệ thống xảy ra khi xóa câu hỏi.');
         }
     }
 

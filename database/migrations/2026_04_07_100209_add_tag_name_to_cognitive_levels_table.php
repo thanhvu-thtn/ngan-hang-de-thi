@@ -11,10 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('cognitive_levels', function (Blueprint $table) {
-            // Thêm nullable() để MySQL gán NULL cho các dòng dữ liệu cũ thay vì chuỗi rỗng
-            $table->string('tag_name', 50)->nullable()->unique()->after('name');
-        });
+        // Kiểm tra xem bảng cognitive_levels đã có cột tag_name chưa
+        if (!Schema::hasColumn('cognitive_levels', 'tag_name')) {
+            Schema::table('cognitive_levels', function (Blueprint $table) {
+                // Tùy thuộc vào code cũ của bác, thường là dòng này:
+                $table->string('tag_name', 50)->nullable()->after('name'); 
+            });
+        }
     }
 
     /**
