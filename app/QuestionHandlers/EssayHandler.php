@@ -33,43 +33,7 @@ class EssayHandler extends BaseQuestionHandler
         ]);
     }
 
-    /**
-     * 2. Lưu chi tiết câu hỏi
-     * Lưu ý: Sửa lỗi dùng sai tên quan hệ 'explanations' thành 'explanation'
-     */
-    public function store(array $data): Question
-    {
-        return DB::transaction(function () use ($data) {
-            // Xử lý lưu ảnh vào local trước khi lưu vào DB
-            $cleanStem = $this->imageService->localizeImages($data['stem']);
-            $cleanExplanation = isset($data['explanation'])
-                                ? $this->imageService->localizeImages($data['explanation'])
-                                : null;
-
-            // 1. Tạo câu hỏi mới
-            $question = Question::create([
-                'name' => $data['name'],
-                'tag_name' => $data['tag_name'],
-                'question_type_id' => $data['type'],
-                'cognitive_level_id' => $data['level'],
-                'stem' => $cleanStem,
-            ]);
-
-            // 2. Gắn mục tiêu đánh giá (từ dữ liệu Bước 1)
-            if (! empty($data['objective_ids'])) {
-                $question->objectives()->sync($data['objective_ids']);
-            }
-
-            // 3. Tạo hướng dẫn chấm (Dùng đúng quan hệ 'explanation')
-            if (! empty($cleanExplanation)) {
-                $question->explanation()->create([
-                    'content' => $cleanExplanation,
-                ]);
-            }
-
-            return $question;
-        });
-    }
+   
 
     /**
      * Xử lý ảnh và lưu câu hỏi Tự luận
@@ -271,5 +235,10 @@ class EssayHandler extends BaseQuestionHandler
     protected function updateSpecificData(Question $question, array $validatedData): void
     {
         // Chưa có logic update cụ thể cho loại này, để trống tạm thời
+    }
+
+    protected function storeSpecificData(Question $question, array $validatedData): void
+    {
+        // Chưa có logic lưu cụ thể cho loại này, để trống tạm thời
     }
 }

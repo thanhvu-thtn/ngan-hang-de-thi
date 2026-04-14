@@ -7,18 +7,20 @@ use App\Models\Objective;
 use App\Models\Question;
 use App\Models\QuestionType;
 use App\Models\User;
+use App\Services\ImageService;
+use App\Services\ObjectivePermissionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
-
 abstract class BaseQuestionHandler implements QuestionHandlerInterface
 {
     // Bổ sung thuộc tính và constructor cho Base
-    protected \App\Services\ImageService $imageService;
-    protected \App\Services\ObjectivePermissionService $permissionService; // Thêm dòng này
+    protected ImageService $imageService;
 
-    public function __construct(\App\Services\ImageService $imageService, \App\Services\ObjectivePermissionService $permissionService)
+    protected ObjectivePermissionService $permissionService; // Thêm dòng này
+
+    public function __construct(ImageService $imageService, ObjectivePermissionService $permissionService)
     {
         $this->imageService = $imageService;
         $this->permissionService = $permissionService; // Thêm dòng này
@@ -31,27 +33,27 @@ abstract class BaseQuestionHandler implements QuestionHandlerInterface
     public function checkDeletePermission(Question $question, User $user): ?string
     {
         // CỬA 1: Đang dùng chung Shared Context
-        if (!is_null($question->shared_context_id)) {
+        if (! is_null($question->shared_context_id)) {
             return 'Câu hỏi này đang nằm trong một cụm câu hỏi dùng chung, không thể xóa riêng lẻ.';
         }
 
         // CỬA 2: Trạng thái Đã duyệt nhưng không có quyền Thẩm định
-        if ($question->status == 1 && !$user->can('tham-dinh-cau-hoi')) {
+        if ($question->status == 1 && ! $user->can('tham-dinh-cau-hoi')) {
             return 'Câu hỏi đã được thẩm định, bạn không có quyền xóa.';
         }
 
         // CỬA 3: Objective nằm ngoài Topic được phân công
         // Lấy mảng mã định danh (tag_name) của các objective thuộc câu hỏi này
         $objectiveCodes = $question->objectives->pluck('tag_name')->toArray();
-        //dd($user);
+        // dd($user);
         $permissionCheck = $this->permissionService->verifyObjectivePermissions($objectiveCodes, $user);
 
-        if (!$permissionCheck['is_valid']) {
+        if (! $permissionCheck['is_valid']) {
             return 'Bạn không có quyền xóa câu hỏi này do chứa mục tiêu đánh giá ngoài phạm vi phân công.';
         }
 
         // Qua hết 3 cửa an toàn
-        return null; 
+        return null;
     }
 
     /**
@@ -286,7 +288,7 @@ abstract class BaseQuestionHandler implements QuestionHandlerInterface
     /**
      * Nhạc trưởng cho việc Validate khi User bấm nút "Cập nhật câu hỏi" trên Web.
      */
-    public function validateUpdateRequest(Request $request, Question $question): array
+    /* public function validateUpdateRequest(Request $request, Question $question): array
     {
         // 1. CÁC QUY TẮC CHUNG CHO MỌI LOẠI CÂU HỎI
         $commonRules = [
@@ -324,6 +326,109 @@ abstract class BaseQuestionHandler implements QuestionHandlerInterface
         // Hàm này sẽ tự động redirect lùi lại kèm báo lỗi màu đỏ (errors) nếu validate xịt
         // Nếu qua ải, nó trả về mảng dữ liệu đã được lọc sạch sẽ
         return $request->validate($rules, $messages);
+    } */
+
+    /**
+     * Hàm lưu mới câu hỏi (Phần chung)
+     */
+    public function store(array $validatedData): Question
+    {
+        return DB::transaction(function () use ($validatedData) {
+            // 1. Khởi tạo và lưu thông tin cơ bản
+            $question = new Question;
+            $question->fill([
+                'tag_name' => $validatedData['tag_name'],
+                'name' => $validatedData['name'] ?? null,
+                'question_type_id' => $validatedData['question_type_id'],
+                'cognitive_level_id' => $validatedData['cognitive_level_id'],
+                'layout_id' => $validatedData['layout_id'] ?? null,
+                'difficulty_index' => $validatedData['difficulty_index'] ?? 0,
+                'status' => $validatedData['status'] ?? 0,
+            ]);
+            
+            // Xử lý ảnh trong nội dung câu hỏi
+            $question->stem = $this->imageService->localizeImages($validatedData['stem']);
+            $question->save();
+
+            // 2. Lưu Lời giải chi tiết (nếu có)
+            if (! empty($validatedData['explanation'])) {
+                $question->explanation()->create([
+                    'content' => $this->imageService->localizeImages($validatedData['explanation']),
+                ]);
+            }
+
+            // 3. Lưu Yêu cầu cần đạt (Objectives - Quan hệ N-N)
+            if (isset($validatedData['objective_ids']) && is_array($validatedData['objective_ids'])) {
+                $question->objectives()->attach($validatedData['objective_ids']);
+            }
+
+            // 4. GỌI CÁC HANDLER CON LƯU PHẦN RIÊNG (Choices,...)
+            $this->storeSpecificData($question, $validatedData);
+
+            return $question;
+        });
+    }
+
+    /**
+     * Các class con bắt buộc phải triển khai hàm này để lưu dữ liệu đặc thù
+     */
+    abstract protected function storeSpecificData(Question $question, array $validatedData): void;
+
+    /**
+     * Hàm dùng chung để Validate dữ liệu cho cả CREATE (store) và EDIT (update)
+     * - Khi store: truyền vào $request (không truyền $question)
+     * - Khi update: truyền vào $request và $question đang sửa
+     */
+    public function validateRequest(Request $request, ?Question $question = null): array
+    {
+        // 1. Xử lý luật unique cho tag_name
+        // Nếu có $question (đang Edit) -> Bỏ qua ID của câu hỏi này
+        // Nếu $question = null (đang Create) -> Kiểm tra unique toàn bảng
+        $uniqueRule = $question
+            ? 'unique:questions,tag_name,'.$question->id
+            : 'unique:questions,tag_name';
+
+        // 2. CÁC QUY TẮC CHUNG CHO MỌI LOẠI CÂU HỎI
+        $commonRules = [
+            'tag_name' => ['required', 'string', 'max:255', $uniqueRule],
+            'name' => 'nullable|string|max:255',
+            'cognitive_level_id' => 'required|exists:cognitive_levels,id',
+            'stem' => 'required|string',
+            'explanation' => 'nullable|string',
+
+            // Validate mảng Chuẩn đầu ra (nếu có tick chọn)
+            'objective_ids' => 'nullable|array',
+            'objective_ids.*' => 'exists:objectives,id',
+
+            'status' => 'nullable|numeric',
+            'difficulty_index' => 'nullable|numeric|min:0|max:1',
+        ];
+
+        // Ràng buộc thêm: Nếu là CREATE thì bắt buộc phải có loại câu hỏi
+        if (! $question) {
+            $commonRules['question_type_id'] = 'required|exists:question_types,id';
+        }
+
+        // 3. THÔNG BÁO LỖI TIẾNG VIỆT CHO PHẦN CHUNG
+        $commonMessages = [
+            'question_type_id.required' => 'Vui lòng chọn Loại câu hỏi.',
+            'tag_name.required' => 'Mã định danh câu hỏi không được để trống.',
+            'tag_name.unique' => 'Mã định danh này đã tồn tại, vui lòng chọn mã khác.',
+            'cognitive_level_id.required' => 'Vui lòng chọn Mức độ nhận thức.',
+            'stem.required' => 'Nội dung câu hỏi (đề bài) không được để trống.',
+        ];
+
+        // 4. GỌI HOOK LẤY LUẬT VÀ THÔNG BÁO TỪ CLASS CON (MultipleChoice, ShortAnswer,...)
+        // Mặc dù tên hàm là "Update" nhưng form giống nhau nên ta dùng chung cho cả Create
+        $specificRules = $this->getSpecificUpdateRules($request);
+        $specificMessages = $this->getSpecificUpdateMessages();
+
+        // 5. GỘP CHUNG VÀ CHẠY VALIDATE CỦA LARAVEL
+        $rules = array_merge($commonRules, $specificRules);
+        $messages = array_merge($commonMessages, $specificMessages);
+
+        // Hàm này tự động redirect lùi lại kèm báo lỗi nếu xịt
+        return $request->validate($rules, $messages);
     }
 
     /**
@@ -337,25 +442,25 @@ abstract class BaseQuestionHandler implements QuestionHandlerInterface
     public function updateQuestionData(Question $question, array $validatedData): void
     {
         DB::transaction(function () use ($question, $validatedData) {
-            
+
             // 1. XỬ LÝ ẢNH TRONG ĐỀ BÀI (STEM)
             $cleanStem = $this->imageService->localizeImages($validatedData['stem']);
 
             // 2. CHUẨN BỊ DỮ LIỆU CẬP NHẬT (Chỉ lấy các trường cơ bản)
             $updateData = [
-                'tag_name'           => $validatedData['tag_name'] ?? $question->tag_name,
-                'name'               => $validatedData['name'] ?? null,
-                'stem'               => $cleanStem,
+                'tag_name' => $validatedData['tag_name'] ?? $question->tag_name,
+                'name' => $validatedData['name'] ?? null,
+                'stem' => $cleanStem,
                 'cognitive_level_id' => $validatedData['cognitive_level_id'],
-                'layout_id'          => $validatedData['layout_id'] ?? $question->layout_id,
+                'layout_id' => $validatedData['layout_id'] ?? $question->layout_id,
             ];
 
             // === KIỂM TRA QUYỀN THẨM ĐỊNH ===
             if (auth()->check() && auth()->user()->can('tham-dinh-cau-hoi')) {
                 // Có quyền thì mới lấy dữ liệu từ form (nếu không có trên form thì giữ nguyên)
                 $updateData['difficulty_index'] = $validatedData['difficulty_index'] ?? $question->difficulty_index;
-                $updateData['status']           = $validatedData['status'] ?? $question->status;
-                
+                $updateData['status'] = $validatedData['status'] ?? $question->status;
+
                 // Mở rộng: Có thể lưu luôn người duyệt và thời gian nếu status thay đổi thành Đã duyệt
                 if (isset($validatedData['status']) && $validatedData['status'] == 1) {
                     $updateData['checker_id'] = auth()->id();
@@ -369,7 +474,7 @@ abstract class BaseQuestionHandler implements QuestionHandlerInterface
             // 3. CẬP NHẬT LỜI GIẢI (Bảng riêng: question_explanations)
             if (isset($validatedData['explanation'])) {
                 $cleanExplanation = $this->imageService->localizeImages($validatedData['explanation']);
-                
+
                 $question->explanation()->updateOrCreate(
                     ['question_id' => $question->id],
                     ['content' => $cleanExplanation]
@@ -387,6 +492,7 @@ abstract class BaseQuestionHandler implements QuestionHandlerInterface
             $this->updateSpecificData($question, $validatedData);
         });
     }
+
     /*
      * Khai báo hàm trừu tượng bắt buộc các class con phải implement để lưu dữ liệu riêng
      */
@@ -395,12 +501,12 @@ abstract class BaseQuestionHandler implements QuestionHandlerInterface
     /*
      * Khai báo hàm trừu tượng bắt buộc các class con phải implement để xóa dữ liệu riêng
      */
-    public function deleteQuestionData(\App\Models\Question $question): void
+    public function deleteQuestionData(Question $question): void
     {
-        \Illuminate\Support\Facades\DB::transaction(function () use ($question) {
+        DB::transaction(function () use ($question) {
             // 1. Dọn rác hình ảnh trên server (nếu có)
             $this->imageService->deleteImagesFromContent($question->stem);
-            foreach($question->choices as $choice) {
+            foreach ($question->choices as $choice) {
                 $this->imageService->deleteImagesFromContent($choice->content);
             }
             if ($question->explanation) {

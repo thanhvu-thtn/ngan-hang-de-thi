@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreQuestionRequest;
 use App\Http\Requests\StoreQuestionSetupRequest;
 use App\Models\CognitiveLevel;
 use App\Models\Question;
+use App\Models\QuestionLayout;
 use App\Models\QuestionType;
 use App\Models\Topic;
-use App\Models\QuestionLayout;
+use App\Models\Objective;
+use App\QuestionHandlers\BaseQuestionHandler;
 use App\QuestionHandlers\EssayHandler;
 use App\QuestionHandlers\MultipleChoiceHandler;
 use App\QuestionHandlers\ShortAnswerHandler;
@@ -127,7 +128,9 @@ class QuestionController extends Controller
 
         // 2. Lấy các dữ liệu cấu hình khác
         $cognitiveLevels = CognitiveLevel::all();
+
         $questionTypes = QuestionType::all();
+        // dd($layouts->toArray());
 
         // Truyền $user sang để hiển thị tên môn học
         return view('questions.create', compact('treeByGrade', 'cognitiveLevels', 'questionTypes', 'user'));
@@ -160,9 +163,10 @@ class QuestionController extends Controller
     {
         // Kiểm tra xem file view con có tồn tại không (VD: resources/views/questions/partials/type_ES.blade.php)
         $viewName = 'questions.partials.type_'.$type_code;
+        $layouts = QuestionLayout::all();
 
         if (view()->exists($viewName)) {
-            return view($viewName)->render();
+            return view($viewName, compact('layouts'))->render();
         }
 
         return response()->json(['error' => 'Không tìm thấy giao diện cho loại câu hỏi này.'], 404);
@@ -171,39 +175,53 @@ class QuestionController extends Controller
     /**
      * Xử lý lưu CHÍNH THỨC (Gom cả phần chung và phần riêng vào DB Transaction)
      */
-    public function store(StoreQuestionRequest $request)
+    // QuestionController.php
+
+    public function store(Request $request)
     {
-        $validatedData = $request->validated();
+        // dd($request->all());
+        // 1. Xác định Handler dựa trên loại câu hỏi
+        // $handler = $this->getHandler($request->question_type_id);
+        $handler = $this->getHandlerByCode($request->type_code); // Tạm thời hardcode để test, sau này sẽ lấy từ $request->question_type_id
+        $typeId = $this->getQuestionTypeIdByCode($request->type_code);
+        
+        
 
-        DB::beginTransaction();
+        // --- CỬA 1: KIỂM TRA QUYỀN TRÊN OBJECTIVES ---
+        if ($request->has('objective_ids')) {
+            // Vì Service của bác nhận vào mảng Tag Name (Code), ta cần lấy từ DB
+            $objectiveCodes = Objective::whereIn('id', $request->objective_ids)
+                ->pluck('tag_name')->toArray();
 
+            $permCheck = $this->permissionService->verifyObjectivePermissions($objectiveCodes, auth()->user());
+
+            if (! $permCheck['is_valid']) {
+                return back()->withErrors(['objective_ids' => $permCheck['errors']])->withInput();
+            }
+        }
+        // 2. NHÉT THÊM TRƯỜNG VÀO REQUEST
+        // Hàm merge nhận vào một mảng, bác có thể nhét bao nhiêu trường tùy thích
+        $request->merge([
+            'question_type_id' => $typeId,
+            // 'truong_khac' => 'gia_tri_khac'
+        ]);
+        //dd($request->all()); // Dừng lại để kiểm tra xem dữ liệu đã được merge vào Request chưa
+        // --- CỬA 2: VALIDATE DỮ LIỆU (CHUNG + RIÊNG) ---
+        // Hàm validateRequest này bác đã bổ sung ở BaseQuestionHandler lượt trước
+        $validatedData = $handler->validateRequest($request);
+        
+        // --- TIẾN HÀNH LƯU ---
         try {
-            $questionType = QuestionType::where('code', $validatedData['type_code'])->firstOrFail();
+            //dd($question);
+            $question = $handler->store($validatedData);
 
-            // 1. Đóng gói phần CHUNG (Đã bỏ created_by)
-            $commonData = [
-                'tag_name' => $validatedData['tag_name'],
-                'name' => $validatedData['name'],
-                'subject_id' => auth()->user()->subject_id,
-                'cognitive_level_id' => $validatedData['cognitive_level_id'],
-                'question_type_id' => $questionType->id,
-            ];
-
-            // 2. Gọi Handler xử lý phần RIÊNG (bóc ảnh) và LƯU vào DB
-            $handler = $this->getHandlerByCode($validatedData['type_code']);
-            $question = $handler->storeQuestion($commonData, $validatedData);
-
-            // 3. Gắn Mục tiêu kiến thức (Bảng trung gian)
-            $question->objectives()->attach($validatedData['objective_ids']);
-
-            DB::commit();
-
-            // return redirect()->route('questions.index')->with('success', 'Đã tạo câu hỏi thành công!');
-            return redirect()->route('questions.edit', $question->id)->with('success', 'Đã tạo câu hỏi thành công!');
+            return redirect()->route('questions.index')
+                ->with('success', "Câu hỏi [{$question->tag_name}] đã được lưu thành công.");
         } catch (\Exception $e) {
-            DB::rollBack();
+            \Log::error('Lỗi khi lưu câu hỏi: '.$e->getMessage());
 
-            return back()->with('error', 'Có lỗi xảy ra khi lưu: '.$e->getMessage())->withInput();
+            return back()->withErrors(['error' => 'Có lỗi xảy ra trong quá trình lưu dữ liệu.'])
+                ->withInput();
         }
     }
 
@@ -305,7 +323,7 @@ class QuestionController extends Controller
 
         // 3. Chạy Validate (tự động gộp chung + riêng)
         // Nếu lỗi, Laravel tự động quay lại form và báo chữ đỏ. Nếu pass, trả về mảng data sạch.
-        $validatedData = $handler->validateUpdateRequest($request, $question);
+        $validatedData = $handler->validateRequest($request, $question);
 
         // 4. Nhờ Handler tiến hành cập nhật vào Database
         // (Chúng ta sẽ xây dựng hàm này ngay sau đây)
@@ -344,7 +362,7 @@ class QuestionController extends Controller
         $question->load(['objectives', 'choices', 'questionType', 'cognitiveLevel']);
 
         // 4. Trả về màn hình confirm
-        //dd($question); // Tạm thời dừng ở đây để kiểm tra dữ liệu câu hỏi trước khi hi
+        // dd($question); // Tạm thời dừng ở đây để kiểm tra dữ liệu câu hỏi trước khi hi
         return view('questions.confirm_delete', compact('question'));
     }
 
@@ -359,11 +377,11 @@ class QuestionController extends Controller
 
             // 3. Verify quyền lần cuối (Cửa bảo vệ an toàn nhỡ ai đó gửi Request Fake)
             $errorMsg = $handler->checkDeletePermission($question, auth()->user());
-            
+
             if ($errorMsg) {
                 // Nếu không có quyền, đá văng về trang index kèm thông báo lỗi
                 return redirect()->route('questions.index')
-                                 ->with('error', $errorMsg);
+                    ->with('error', $errorMsg);
             }
 
             // 4. Gọi Handler dọn dẹp toàn bộ dữ liệu
@@ -371,13 +389,14 @@ class QuestionController extends Controller
 
             // 5. Xóa thành công, quay về danh sách
             return redirect()->route('questions.index')
-                             ->with('success', 'Đã xóa câu hỏi và các dữ liệu liên quan thành công!');
+                ->with('success', 'Đã xóa câu hỏi và các dữ liệu liên quan thành công!');
 
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException $e) {
             return redirect()->route('questions.index')->with('error', 'Không tìm thấy câu hỏi này trong hệ thống.');
-            
+
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Lỗi khi xóa câu hỏi ID ' . $id . ': ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('Lỗi khi xóa câu hỏi ID '.$id.': '.$e->getMessage());
+
             return redirect()->route('questions.index')->with('error', 'Có lỗi hệ thống xảy ra khi xóa câu hỏi.');
         }
     }
@@ -530,5 +549,27 @@ class QuestionController extends Controller
         $exists = Question::where('tag_name', $request->tag_name)->exists();
 
         return response()->json(['exists' => $exists]);
+    }
+
+    /**
+     * Helper: Lấy Handler tương ứng dựa vào ID của loại câu hỏi
+     *
+     * @param  int  $typeId
+     * @return BaseQuestionHandler
+     */
+    private function getHandler($typeId)
+    {
+        // Tạm thời dừng ở đây để kiểm tra giá trị typeId trước khi tiếp tục logic tìm Handler
+        // 1. Tìm loại câu hỏi trong DB để lấy cái 'code' (MC, TF, SA, ES)
+        $questionType = QuestionType::findOrFail($typeId);
+
+        // 2. Tận dụng luôn cái hàm getHandlerByCode đã có sẵn ở dưới
+        return $this->getHandlerByCode($questionType->code);
+    }
+
+    private function getQuestionTypeIdByCode(string $code): ?int
+    {
+        // Hàm value('id') sẽ chỉ lấy đúng cột id, giúp truy vấn cực nhanh nhẹn
+        return QuestionType::where('code', $code)->value('id');
     }
 }

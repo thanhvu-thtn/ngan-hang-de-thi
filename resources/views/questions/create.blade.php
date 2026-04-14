@@ -36,10 +36,57 @@
 
             {{-- BƯỚC 1: CẤU HÌNH NHANH --}}
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
+
                 <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2"><span
                         class="w-6 h-6 inline-flex items-center justify-center bg-slate-100 rounded-full text-sm mr-2">1</span>
                     Cấu hình chung</h3>
+                {{-- 1. TÓM TẮT VÀ MÃ ĐỊNH DANH --}}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    {{-- Tóm tắt nội dung --}}
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">
+                            Tóm tắt nội dung (Name) <span class="text-rose-500">*</span>
+                        </label>
+                        <input type="text" name="name" value="{{ old('name') }}"
+                            class="w-full border border-slate-300 rounded-md bg-transparent px-[5px] py-2 text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors pr-8"
+                            placeholder="Tóm tắt ngắn gọn nội dung câu hỏi')">
+                        @error('name')
+                            <p class="text-sm text-red-500 mt-1"><i class="fa-solid fa-circle-exclamation"></i>
+                                {{ $message }}
+                            </p>
+                        @enderror
+                    </div>
+
+                    {{-- Mã định danh (Dùng Str::uuid() của Laravel để tạo sẵn UUID) --}}
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">
+                            Mã định danh (Tag Name) <span class="text-rose-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <input type="text" id="tag_name_input" name="tag_name"
+                                value="{{ old('tag_name', (string) \Illuminate\Support\Str::uuid()) }}"
+                                class="w-full border border-slate-300 rounded-md bg-transparent px-[5px] py-2 text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors pr-8">
+                            {{-- Nút X (Clear) --}}
+                            <button type="button" id="clear_tag_btn"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-rose-500 transition-colors hidden focus:outline-none">
+                                <i class="fa-solid fa-circle-xmark text-lg"></i>
+                            </button>
+                        </div>
+                        {{-- Cảnh báo AJAX --}}
+                        <p id="tag_name_warning" class="text-sm text-rose-600 mt-1 hidden font-medium">
+                            <i class="fa-solid fa-triangle-exclamation"></i> Mã định danh này đã có trong CSDL, yêu cầu bạn
+                            gõ
+                            lại nếu không sẽ không lưu câu hỏi được!
+                        </p>
+                        @error('tag_name')
+                            <p class="text-sm text-red-500 mt-1"><i class="fa-solid fa-circle-exclamation"></i>
+                                {{ $message }}
+                            </p>
+                        @enderror
+                    </div>
+                </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
                     {{-- Mức độ --}}
                     <div>
                         <label class="block text-sm font-semibold text-slate-700 mb-2">Mức độ nhận thức <span
@@ -64,7 +111,8 @@
                             class="form-select w-full rounded-xl border-slate-300 focus:ring-blue-500" required>
                             <option value="">-- Chọn loại câu hỏi --</option>
                             @foreach ($questionTypes as $type)
-                                <option value="{{ $type->code }}" {{ old('type_code') == $type->code ? 'selected' : '' }}>
+                                <option value="{{ $type->code }}"
+                                    {{ old('type_code') == $type->code ? 'selected' : '' }}>
                                     {{ $type->name }}
                                 </option>
                             @endforeach
@@ -73,48 +121,7 @@
                 </div>
             </div>
 
-            {{-- 1. TÓM TẮT VÀ MÃ ĐỊNH DANH --}}
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                {{-- Tóm tắt nội dung --}}
-                <div>
-                    <label class="block text-sm font-semibold text-slate-700 mb-1">
-                        Tóm tắt nội dung (Name) <span class="text-rose-500">*</span>
-                    </label>
-                    <input type="text" name="name" value="{{ old('name') }}"
-                        class="w-full border-slate-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-                        placeholder="VD: Tìm m để hàm số bậc 3 đồng biến...">
-                    @error('name')
-                        <p class="text-sm text-red-500 mt-1"><i class="fa-solid fa-circle-exclamation"></i> {{ $message }}
-                        </p>
-                    @enderror
-                </div>
 
-                {{-- Mã định danh (Dùng Str::uuid() của Laravel để tạo sẵn UUID) --}}
-                <div>
-                    <label class="block text-sm font-semibold text-slate-700 mb-1">
-                        Mã định danh (Tag Name) <span class="text-rose-500">*</span>
-                    </label>
-                    <div class="relative">
-                        <input type="text" id="tag_name_input" name="tag_name"
-                            value="{{ old('tag_name', (string) \Illuminate\Support\Str::uuid()) }}"
-                            class="w-full border-slate-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 shadow-sm pr-10">
-                        {{-- Nút X (Clear) --}}
-                        <button type="button" id="clear_tag_btn"
-                            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-rose-500 transition-colors hidden focus:outline-none">
-                            <i class="fa-solid fa-circle-xmark text-lg"></i>
-                        </button>
-                    </div>
-                    {{-- Cảnh báo AJAX --}}
-                    <p id="tag_name_warning" class="text-sm text-rose-600 mt-1 hidden font-medium">
-                        <i class="fa-solid fa-triangle-exclamation"></i> Mã định danh này đã có trong CSDL, yêu cầu bạn gõ
-                        lại nếu không sẽ không lưu câu hỏi được!
-                    </p>
-                    @error('tag_name')
-                        <p class="text-sm text-red-500 mt-1"><i class="fa-solid fa-circle-exclamation"></i> {{ $message }}
-                        </p>
-                    @enderror
-                </div>
-            </div>
 
             {{-- BƯỚC 2: CHỌN MỤC TIÊU (TREEVIEW FULL BỀ NGANG) --}}
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
@@ -147,10 +154,12 @@
                  KHU VỰC NÚT BẤM LƯU CÂU HỎI
                  ========================================== --}}
             <div class="mt-8 pt-6 border-t border-slate-200 flex justify-end gap-3">
-                <a href="{{ route('questions.index') }}" class="px-6 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 font-semibold transition shadow-sm">
+                <a href="{{ route('questions.index') }}"
+                    class="px-6 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 font-semibold transition shadow-sm">
                     Hủy bỏ
                 </a>
-                <button type="submit" id="btn-submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-bold transition shadow-sm flex items-center gap-2">
+                <button type="submit" id="btn-submit"
+                    class="px-6 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-bold transition shadow-sm flex items-center gap-2">
                     <i class="fa-solid fa-floppy-disk"></i>
                     Lưu vào ngân hàng
                 </button>
@@ -190,7 +199,7 @@
 
                         // 1. KÍCH HOẠT TINYMCE ĐỒNG BỘ
                         if (window.initEduBankEditor) {
-                            window.initEduBankEditor('#editor-stem, #editor-explanation');
+                            window.initEduBankEditor('#editor-stem, #editor-explanation, .editor-choice');
                         }
 
                         // 2. RENDER TOÁN HỌC (Nếu đề bài đang tải lại từ validation lỗi)
@@ -306,6 +315,33 @@
                 .catch(err => console.error('Lỗi khi kiểm tra tag_name:', err));
         });
     </script>
-    @include('partials.editor_script')
-    {{-- Lưu ý: Đổi đường dẫn 'partials.editor_script' cho đúng với thư mục thực tế của bạn --}}
+    <script>
+        function formatShortAnswer(input) {
+            let val = input.value;
+
+            // 1. Tự động chuyển tất cả dấu chấm (.) thành phẩy (,)
+            val = val.replace(/\./g, ',');
+
+            // 2. Loại bỏ mọi ký tự lạ (chỉ giữ số, phẩy, trừ)
+            val = val.replace(/[^0-9,-]/g, '');
+
+            // 3. Dấu trừ (-) CHỈ được phép nằm ở vị trí đầu tiên
+            val = val.replace(/(?!^)-/g, '');
+
+            // 4. BẮT BUỘC TRƯỚC DẤU PHẨY PHẢI CÓ SỐ
+            // a. Nếu dấu phẩy đứng ngay đầu tiên -> xóa nó
+            val = val.replace(/^,/, '');
+            // b. Nếu dấu phẩy đứng ngay sau dấu trừ -> giữ lại dấu trừ, xóa dấu phẩy
+            val = val.replace(/^-,/, '-');
+
+            // 5. Chỉ cho phép tối đa 1 dấu phẩy (,)
+            let parts = val.split(',');
+            if (parts.length > 2) {
+                val = parts[0] + ',' + parts.slice(1).join('');
+            }
+
+            input.value = val;
+        }
+    </script>
+    @include('partials.editor_script', ['selector' => '#editor-stem, #editor-explanation, .editor-choice'])
 @endsection

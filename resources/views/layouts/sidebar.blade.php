@@ -33,7 +33,8 @@
                                 class="fa-solid fa-key w-5 text-center mr-2 text-slate-400"></i> Quản lý Quyền</a></li>
                     <li><a href="{{ route('roles.index') }}"
                             class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition"><i
-                                class="fa-solid fa-user-shield w-5 text-center mr-2 text-slate-400"></i> Quản lý Vai trò</a></li>
+                                class="fa-solid fa-user-shield w-5 text-center mr-2 text-slate-400"></i> Quản lý Vai trò</a>
+                    </li>
                 </ul>
             </div>
         @endhasrole
@@ -68,7 +69,13 @@
                 <a href="{{ route('questions.index') }}"
                     class="flex items-center p-2 text-slate-700 rounded-lg hover:bg-slate-100 group">
                     <i class="fa-solid fa-layer-group text-slate-400 group-hover:text-blue-600 transition duration-75"></i>
-                    <span class="ms-3">Ngân hàng câu hỏi</span>
+                    <span class="ms-3">Câu hỏi tự do</span>
+                </a>
+            </li>
+            <li>
+                <a href="{{-- route của bác --}}"
+                    class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition">
+                    <i class="fa-solid fa-layer-group w-5 text-center mr-2 text-slate-400"></i> Cụm câu hỏi
                 </a>
             </li>
             {{-- Mục Upload câu hỏi: Yêu cầu ĐỒNG THỜI quyền biên soạn (từ group cha) và quyền upload --}}

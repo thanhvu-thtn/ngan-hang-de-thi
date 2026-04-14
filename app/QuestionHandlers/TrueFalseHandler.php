@@ -13,11 +13,6 @@ class TrueFalseHandler extends BaseQuestionHandler
         return [];
     }
 
-    public function store(array $data): Question
-    {
-        // TODO: Logic lưu câu hỏi Đúng/Sai (chỉ cần lưu 1 Question Choice và cờ is_correct)
-        return new Question;
-    }
 
     public function update(Question $question, array $validatedData): Question
     {
@@ -98,15 +93,15 @@ class TrueFalseHandler extends BaseQuestionHandler
 
         // Gom nhóm các từ khóa mang ý nghĩa "Đúng"
         $trueValues = ['Đ', 'T', 'ĐÚNG', 'TRUE'];
-        
+
         // Chuẩn hóa thành 1 chữ duy nhất trước khi lưu vào DB để hệ thống nhất quán
         $finalAnswer = in_array($answerText, $trueValues) ? 'Đúng' : 'Sai';
 
         // Lưu đáp án vào bảng choices
         $question->choices()->create([
-            'content'    => $finalAnswer,
+            'content' => $finalAnswer,
             'is_correct' => true, // Mặc định đáp án import vào là đáp án đúng
-            'order'      => 1,
+            'order' => 1,
         ]);
     }
 
@@ -124,23 +119,23 @@ class TrueFalseHandler extends BaseQuestionHandler
     /**
      * LUẬT VALIDATE RIÊNG CHO FORM CẬP NHẬT ĐÚNG/SAI
      */
-    protected function getSpecificUpdateRules(\Illuminate\Http\Request $request): array
+    protected function getSpecificUpdateRules(Request $request): array
     {
         return [
-            // Giả sử trên form Edit của bác, name của input radio là 'tf_answer' 
+            // Giả sử trên form Edit của bác, name của input radio là 'tf_answer'
             // và value gửi lên là 'Đúng' hoặc 'Sai'
             'tf_answer' => 'required|string|in:Đúng,Sai',
         ];
     }
 
     /**
-     * THÔNG BÁO LỖI RIÊNG 
+     * THÔNG BÁO LỖI RIÊNG
      */
     protected function getSpecificUpdateMessages(): array
     {
         return [
             'tf_answer.required' => 'Vui lòng chọn đáp án Đúng hoặc Sai cho câu hỏi.',
-            'tf_answer.in'       => 'Đáp án chỉ được phép là Đúng hoặc Sai.',
+            'tf_answer.in' => 'Đáp án chỉ được phép là Đúng hoặc Sai.',
         ];
     }
 
@@ -154,15 +149,28 @@ class TrueFalseHandler extends BaseQuestionHandler
 
         if ($choice) {
             $choice->update([
-                'content' => $validatedData['tf_answer']
+                'content' => $validatedData['tf_answer'],
             ]);
         } else {
             // Đề phòng trường hợp trước đó DB bị lỗi mất data, tự động tạo lại
             $question->choices()->create([
-                'content'    => $validatedData['tf_answer'],
+                'content' => $validatedData['tf_answer'],
                 'is_correct' => true,
-                'order'      => 1,
+                'order' => 1,
             ]);
         }
+    }
+    
+
+    protected function storeSpecificData(Question $question, array $validatedData): void
+    {
+        //dd($validatedData); // Dừng lại để kiểm tra dữ liệu đã được validate đúng chưa trước khi lưu
+        // TF lưu 2 bản ghi: Đúng và Sai. Dựa vào correct_choice (0 hoặc 1) để đánh dấu 
+        $question->choices()->create([
+                'content' => $validatedData['tf_answer'],
+                'is_correct' => true,
+                'order' => 1,
+            ]);
+
     }
 }

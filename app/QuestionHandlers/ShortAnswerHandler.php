@@ -13,18 +13,13 @@ class ShortAnswerHandler extends BaseQuestionHandler
         return [];
     }
 
-    public function store(array $data): Question
-    {
-        // TODO: Logic lưu câu hỏi Trả lời ngắn
-        return new Question;
-    }
+    
 
     public function update(Question $question, array $validatedData): Question
     {
         // TODO: Logic cập nhật câu hỏi
         return $question;
     }
-
 
     public function destroy(Question $question): void
     {
@@ -131,27 +126,27 @@ class ShortAnswerHandler extends BaseQuestionHandler
     /**
      * LUẬT VALIDATE RIÊNG CHO FORM CẬP NHẬT TRẢ LỜI NGẮN
      */
-    protected function getSpecificUpdateRules(\Illuminate\Http\Request $request): array
+    protected function getSpecificUpdateRules(Request $request): array
     {
         return [
             'sa_answer' => [
                 'required',
                 'string',
                 'max:4',
-                'regex:/^-?[0-9]+(,[0-9]+)?$/' // Phải là số, có thể có dấu âm, có tối đa 1 dấu phẩy
+                'regex:/^-?[0-9]+(,[0-9]+)?$/', // Phải là số, có thể có dấu âm, có tối đa 1 dấu phẩy
             ],
         ];
     }
 
     /**
-     * THÔNG BÁO LỖI RIÊNG 
+     * THÔNG BÁO LỖI RIÊNG
      */
     protected function getSpecificUpdateMessages(): array
     {
         return [
             'sa_answer.required' => 'Vui lòng nhập đáp án chính xác cho câu hỏi.',
-            'sa_answer.max'      => 'Đáp án chỉ được chứa tối đa 4 ký tự.',
-            'sa_answer.regex'    => 'Đáp án không đúng định dạng (chỉ chứa số, dấu trừ ở đầu và tối đa 1 dấu phẩy).',
+            'sa_answer.max' => 'Đáp án chỉ được chứa tối đa 4 ký tự.',
+            'sa_answer.regex' => 'Đáp án không đúng định dạng (chỉ chứa số, dấu trừ ở đầu và tối đa 1 dấu phẩy).',
         ];
     }
 
@@ -162,15 +157,26 @@ class ShortAnswerHandler extends BaseQuestionHandler
 
         if ($choice) {
             $choice->update([
-                'content' => $validatedData['sa_answer']
+                'content' => $validatedData['sa_answer'],
             ]);
         } else {
             // Đề phòng trường hợp trước đó bị lỗi mất data, tự động tạo lại
             $question->choices()->create([
-                'content'    => $validatedData['sa_answer'],
+                'content' => $validatedData['sa_answer'],
                 'is_correct' => true,
-                'order'      => 1,
+                'order' => 1,
             ]);
         }
+    }
+
+    
+    
+    protected function storeSpecificData(Question $question, array $validatedData): void
+    {
+        // SA chỉ lưu 1 đáp án vào bảng choices
+        $question->choices()->create([
+            'content' => $validatedData['sa_answer'],
+            'is_correct' => true,
+        ]);
     }
 }
