@@ -121,6 +121,7 @@ class MultipleChoiceHandler extends BaseQuestionHandler
             'choices.*.content' => 'required|string',      // Từng phương án không được rỗng
             'choices.*.ratio' => 'required|numeric|min:0.2|max:1.0', // Tỷ lệ điểm 0-100
             'correct_choice' => 'required|numeric',     // Phải có 1 nút radio được tick
+            'choices.*.order' => 'nullable|integer|min:0', // Thứ tự phương án phải là số nguyên dương
             'layout_id' => 'required|exists:question_layouts,id',
         ];
     }
@@ -141,6 +142,8 @@ class MultipleChoiceHandler extends BaseQuestionHandler
             'choices.*.ratio.numeric' => 'Tỷ lệ chiều ngang phải là một con số.',
             'choices.*.ratio.min' => 'Tỷ lệ chiều ngang không được nhỏ hơn 0.2.',
             'choices.*.ratio.max' => 'Tỷ lệ chiều ngang không được vượt quá 1.0.',
+            'choices.*.order.integer' => 'Thứ tự phương án phải là một số nguyên.',
+            'choices.*.order.min' => 'Thứ tự phương án không được nhỏ hơn 0.',
             'correct_choice.required' => 'Vui lòng chọn một phương án làm đáp án đúng.',
         ];
     }
@@ -170,6 +173,7 @@ class MultipleChoiceHandler extends BaseQuestionHandler
                 'content' => $choiceData['content'],
                 'ratio' => $choiceData['ratio'] ?? 1.0,
                 'is_correct' => $isCorrect,
+                'order' => $choiceData['order'] ?? 0,
             ];
 
             // 3. Đắp dữ liệu mới vào phương án cũ tương ứng (Dựa theo thứ tự)
@@ -190,7 +194,7 @@ class MultipleChoiceHandler extends BaseQuestionHandler
                 'content' => $this->imageService->localizeImages($choiceData['content']),
                 'is_correct' => ($index == $correctChoiceIndex),
                 'ratio' => $choiceData['ratio'] ?? 1.0,
-                'order' => $index,
+                'order' => $choiceData['order'] ?? 0,
             ]);
         }
     }

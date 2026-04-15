@@ -33,6 +33,9 @@
 
         <form action="{{ route('questions.store') }}" method="POST" id="question-form" enctype="multipart/form-data">
             @csrf
+            @if (isset($sharedContextId))
+                <input type="hidden" name="shared_context_id" value="{{ $sharedContextId }}">
+            @endif
 
             {{-- BƯỚC 1: CẤU HÌNH NHANH --}}
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
@@ -84,11 +87,12 @@
                             </p>
                         @enderror
                     </div>
+
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6 items-start">
 
                     {{-- Mức độ --}}
-                    <div>
+                    <div class="md:col-span-2">
                         <label class="block text-sm font-semibold text-slate-700 mb-2">Mức độ nhận thức <span
                                 class="text-rose-500">*</span></label>
                         <select name="cognitive_level_id"
@@ -104,7 +108,7 @@
                     </div>
 
                     {{-- Loại câu hỏi --}}
-                    <div>
+                    <div class="md:col-span-2">
                         <label class="block text-sm font-semibold text-slate-700 mb-2">Loại câu hỏi <span
                                 class="text-rose-500">*</span></label>
                         <select name="type_code" id="question_type_select"
@@ -117,6 +121,16 @@
                                 </option>
                             @endforeach
                         </select>
+                    </div>
+                    {{-- Thứ tự hiển thị --}}
+                    <div class="md:col-span-1">
+                        <label for="sort_order" class="block text-sm font-bold text-slate-700 mb-2">Thứ tự</label>
+                        <input type="number" name="sort_order" id="sort_order" value="{{ old('sort_order', 0) }}"
+                            step="1"
+                            class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 text-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm">
+                        @error('sort_order')
+                            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                        @enderror
                     </div>
                 </div>
             </div>

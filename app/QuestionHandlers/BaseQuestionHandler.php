@@ -30,11 +30,15 @@ abstract class BaseQuestionHandler implements QuestionHandlerInterface
      * Kiểm tra 3 cửa bảo mật trước khi xóa câu hỏi
      * Trả về string (thông báo lỗi) nếu bị chặn, trả về null nếu hợp lệ.
      */
-    public function checkDeletePermission(Question $question, User $user): ?string
+    // Thêm ?int $fromSharedContextId = null
+    public function checkDeletePermission(Question $question, User $user, ?int $fromSharedContextId = null): ?string
     {
         // CỬA 1: Đang dùng chung Shared Context
         if (! is_null($question->shared_context_id)) {
-            return 'Câu hỏi này đang nằm trong một cụm câu hỏi dùng chung, không thể xóa riêng lẻ.';
+            // Nếu shared_context_id của câu hỏi KHÁC với ID truyền từ ngoài vào -> Chặn
+            if ($question->shared_context_id != $fromSharedContextId) {
+                return 'Câu hỏi này đang nằm trong một cụm câu hỏi dùng chung, không thể xóa riêng lẻ.';
+            }
         }
 
         // CỬA 2: Trạng thái Đã duyệt nhưng không có quyền Thẩm định
@@ -254,6 +258,7 @@ abstract class BaseQuestionHandler implements QuestionHandlerInterface
             'shared_context' => $question->sharedContext->content ?? null,
             'layout_name' => $question->layout->name ?? null,
             'checker_name' => $question->checker->name ?? null,
+            'sort_order' => $question->sort_order ?? 0,
 
             // CÁC TRƯỜNG ID GỐC (Bổ sung thêm để dùng cho Edit)
             'cognitive_level_id' => $question->cognitive_level_id,
@@ -344,8 +349,10 @@ abstract class BaseQuestionHandler implements QuestionHandlerInterface
                 'layout_id' => $validatedData['layout_id'] ?? null,
                 'difficulty_index' => $validatedData['difficulty_index'] ?? 0,
                 'status' => $validatedData['status'] ?? 0,
+                'shared_context_id' => $validatedData['shared_context_id'] ?? null,
+                'sort_order' => $validatedData['sort_order'] ?? 0,
             ]);
-            
+
             // Xử lý ảnh trong nội dung câu hỏi
             $question->stem = $this->imageService->localizeImages($validatedData['stem']);
             $question->save();
@@ -402,6 +409,8 @@ abstract class BaseQuestionHandler implements QuestionHandlerInterface
 
             'status' => 'nullable|numeric',
             'difficulty_index' => 'nullable|numeric|min:0|max:1',
+            'shared_context_id' => 'nullable|integer|exists:shared_contexts,id',
+            'sort_order' => 'nullable|integer|min:0',
         ];
 
         // Ràng buộc thêm: Nếu là CREATE thì bắt buộc phải có loại câu hỏi
@@ -416,6 +425,9 @@ abstract class BaseQuestionHandler implements QuestionHandlerInterface
             'tag_name.unique' => 'Mã định danh này đã tồn tại, vui lòng chọn mã khác.',
             'cognitive_level_id.required' => 'Vui lòng chọn Mức độ nhận thức.',
             'stem.required' => 'Nội dung câu hỏi (đề bài) không được để trống.',
+            'shared_context_id.exists' => 'Dữ liệu dùng chung không hợp lệ.',
+            'sort_order.integer' => 'Thứ tự phải là một số nguyên.',
+            'sort_order.min' => 'Thứ tự phải lớn hơn hoặc bằng 0.',
         ];
 
         // 4. GỌI HOOK LẤY LUẬT VÀ THÔNG BÁO TỪ CLASS CON (MultipleChoice, ShortAnswer,...)
@@ -453,6 +465,7 @@ abstract class BaseQuestionHandler implements QuestionHandlerInterface
                 'stem' => $cleanStem,
                 'cognitive_level_id' => $validatedData['cognitive_level_id'],
                 'layout_id' => $validatedData['layout_id'] ?? $question->layout_id,
+                'sort_order' => $validatedData['sort_order'] ?? 0,
             ];
 
             // === KIỂM TRA QUYỀN THẨM ĐỊNH ===

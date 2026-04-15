@@ -14,7 +14,7 @@
                         <a href="#" class="text-indigo-600 hover:text-indigo-800 hover:underline transition-colors">Câu
                             hỏi có dữ liệu dùng chung</a> |
                     @endif
-                    Loại: {{ $data['type_name'] }} | Ngày tạo: {{ $data['created_at'] }}
+                    Loại: {{ $data['type_name'] }} | Ngày tạo: {{ $data['created_at'] }} | Thứ tự: {{ $data['sort_order'] ?? 0 }}
                 </p>
             </div>
             <button onclick="window.history.back();"

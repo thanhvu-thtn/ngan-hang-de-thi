@@ -73,7 +73,7 @@
                 </a>
             </li>
             <li>
-                <a href="{{-- route của bác --}}"
+                <a href="{{ route('shared-contexts.index') }}"
                     class="block px-3 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 hover:text-slate-900 transition">
                     <i class="fa-solid fa-layer-group w-5 text-center mr-2 text-slate-400"></i> Cụm câu hỏi
                 </a>

@@ -27,6 +27,7 @@ class Question extends Model
         'status',       // Mới thêm
         'checker_id',   // Mới thêm
         'checked_at',   // Mới thêm
+        'sort_order',
     ];
 
     // Thuộc về 1 Loại câu hỏi

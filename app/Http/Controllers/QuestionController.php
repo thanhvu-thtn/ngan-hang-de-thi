@@ -4,11 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreQuestionSetupRequest;
 use App\Models\CognitiveLevel;
+use App\Models\Objective;
 use App\Models\Question;
 use App\Models\QuestionLayout;
 use App\Models\QuestionType;
 use App\Models\Topic;
-use App\Models\Objective;
 use App\QuestionHandlers\BaseQuestionHandler;
 use App\QuestionHandlers\EssayHandler;
 use App\QuestionHandlers\MultipleChoiceHandler;
@@ -118,9 +118,12 @@ class QuestionController extends Controller
     /**
      * Hiển thị giao diện Form tạo câu hỏi CHÍNH
      */
-    public function create()
+    public function create(Request $request)
     {
         $user = auth()->user();
+
+        // Lấy shared_context_id từ URL (ví dụ: ?shared_context_id=5)
+        $sharedContextId = $request->query('shared_context_id');
 
         // 1. Lấy cây mục tiêu/chuyên đề mà giáo viên này được phép biên soạn
         // Sử dụng Service có sẵn để đảm bảo chỉ hiện những gì giáo viên được phân công
@@ -133,7 +136,7 @@ class QuestionController extends Controller
         // dd($layouts->toArray());
 
         // Truyền $user sang để hiển thị tên môn học
-        return view('questions.create', compact('treeByGrade', 'cognitiveLevels', 'questionTypes', 'user'));
+        return view('questions.create', compact('treeByGrade', 'cognitiveLevels', 'questionTypes', 'user','sharedContextId'));
     }
 
     /**
@@ -184,8 +187,6 @@ class QuestionController extends Controller
         // $handler = $this->getHandler($request->question_type_id);
         $handler = $this->getHandlerByCode($request->type_code); // Tạm thời hardcode để test, sau này sẽ lấy từ $request->question_type_id
         $typeId = $this->getQuestionTypeIdByCode($request->type_code);
-        
-        
 
         // --- CỬA 1: KIỂM TRA QUYỀN TRÊN OBJECTIVES ---
         if ($request->has('objective_ids')) {
@@ -205,14 +206,14 @@ class QuestionController extends Controller
             'question_type_id' => $typeId,
             // 'truong_khac' => 'gia_tri_khac'
         ]);
-        //dd($request->all()); // Dừng lại để kiểm tra xem dữ liệu đã được merge vào Request chưa
+        // dd($request->all()); // Dừng lại để kiểm tra xem dữ liệu đã được merge vào Request chưa
         // --- CỬA 2: VALIDATE DỮ LIỆU (CHUNG + RIÊNG) ---
         // Hàm validateRequest này bác đã bổ sung ở BaseQuestionHandler lượt trước
         $validatedData = $handler->validateRequest($request);
-        
+
         // --- TIẾN HÀNH LƯU ---
         try {
-            //dd($question);
+            // dd($question);
             $question = $handler->store($validatedData);
 
             return redirect()->route('questions.index')
@@ -337,7 +338,7 @@ class QuestionController extends Controller
     /**
      * Hiển thị màn hình xác nhận trước khi xóa
      */
-    public function delete($id)
+    public function delete(Request $request, $id)
     {
         // 1. Tự tìm câu hỏi trong Database bằng ID (nếu không có sẽ tự văng lỗi 404)
         $question = Question::findOrFail($id);
@@ -350,8 +351,11 @@ class QuestionController extends Controller
         // Lấy Handler tương ứng với loại câu hỏi
         $handler = $this->getHandlerByCode($question->questionType->code);
 
+        // Lấy ID từ URL: /questions/5/delete?shared_context_id=...
+        $fromContextId = $request->query('shared_context_id');
+
         // 2. Kiểm tra quyền xóa (gọi xuống Handler)
-        $errorMsg = $handler->checkDeletePermission($question, auth()->user());
+        $errorMsg = $handler->checkDeletePermission($question, auth()->user(), $fromContextId);
 
         // Nếu có lỗi (bị chặn ở 1 trong 3 cửa) -> Bật ngược lại kèm thông báo
         if ($errorMsg) {
@@ -363,7 +367,7 @@ class QuestionController extends Controller
 
         // 4. Trả về màn hình confirm
         // dd($question); // Tạm thời dừng ở đây để kiểm tra dữ liệu câu hỏi trước khi hi
-        return view('questions.confirm_delete', compact('question'));
+        return view('questions.confirm_delete', compact('question', 'fromContextId'));
     }
 
     public function destroy(Request $request, $id)
@@ -375,8 +379,11 @@ class QuestionController extends Controller
             // 2. Lấy bộ xử lý (Handler) tương ứng với loại câu hỏi
             $handler = $this->getHandlerByCode($question->questionType->code);
 
+            // Lấy ID từ Form Submit (input hidden)
+            $fromContextId = $request->input('shared_context_id');
+
             // 3. Verify quyền lần cuối (Cửa bảo vệ an toàn nhỡ ai đó gửi Request Fake)
-            $errorMsg = $handler->checkDeletePermission($question, auth()->user());
+            $errorMsg = $handler->checkDeletePermission($question, auth()->user(), $fromContextId);
 
             if ($errorMsg) {
                 // Nếu không có quyền, đá văng về trang index kèm thông báo lỗi
@@ -388,6 +395,13 @@ class QuestionController extends Controller
             $handler->deleteQuestionData($question);
 
             // 5. Xóa thành công, quay về danh sách
+            // Xóa xong thì chuyển hướng đi đâu?
+            if ($fromContextId) {
+                // Nếu xóa từ Shared Context thì quay về đúng trang Shared Context đó
+                return redirect()->route('shared-contexts.show', $fromContextId)
+                    ->with('success', 'Đã xóa câu hỏi khỏi dữ liệu dùng chung.');
+            }
+
             return redirect()->route('questions.index')
                 ->with('success', 'Đã xóa câu hỏi và các dữ liệu liên quan thành công!');
 

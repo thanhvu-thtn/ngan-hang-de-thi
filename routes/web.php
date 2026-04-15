@@ -133,12 +133,14 @@ Route::middleware('auth')->group(function () {
         // =========================================================================
         // 3. NHÓM SHARED CONTEXT (Đoạn thông tin dùng chung)
         // =========================================================================
-        Route::prefix('shared-contexts')->name('shared_contexts.')->group(function () {
+        /* Route::prefix('shared-contexts')->name('shared_contexts.')->group(function () {
+            Route::get('index',[SharedContextController::class,'index'])->name('index');
             Route::post('create', [SharedContextController::class, 'store'])->name('store');
             Route::get('{id}/show', [SharedContextController::class, 'show'])->name('show');
             Route::get('{id}/edit', [SharedContextController::class, 'edit'])->name('edit');
             Route::put('{id}', [SharedContextController::class, 'update'])->name('update');
-        });
+        }); */
+        Route::resource('shared-contexts', SharedContextController::class);
 
         // =========================================================================
         // 4. RESOURCE CHÍNH QUẢN LÝ CÂU HỎI

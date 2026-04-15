@@ -74,6 +74,15 @@
                                     class="w-20 text-sm border-slate-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-1.5 text-center font-semibold text-slate-700"
                                     min="0" max="100" step="0.1">
                             </div>
+                            <div class="flex items-center gap-2">
+                                <label class="text-sm font-medium text-slate-600" for="order-{{ $index }}">Thứ tự
+                                    :</label>
+                                <input type="number" id="order-{{ $index }}"
+                                    name="choices[{{ $index }}][order]"
+                                    value="{{ old("choices.{$index}.order", 0) }}"
+                                    class="w-20 text-sm border-slate-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-1.5 text-center font-semibold text-slate-700"
+                                    min="0" step="1">
+                            </div>
                         </div>
                     </div>
                 @endfor

@@ -19,25 +19,31 @@
         @include('layouts.sidebar')
 
         <main class="flex-1 bg-slate-50 p-8 overflow-y-auto relative">
-            
+
             {{-- KHỐI HIỂN THỊ THÔNG BÁO GÓC TRÊN BÊN PHẢI (TOÀN CỤC) --}}
             @if (session('success'))
-                <div class="auto-dismiss fixed top-24 right-8 z-50 p-4 min-w-[300px] text-sm text-emerald-800 rounded-xl bg-emerald-50 border border-emerald-200 shadow-lg transition-opacity duration-500" role="alert">
-                    <span class="font-bold"><i class="fa-solid fa-circle-check mr-1"></i> Thành công!</span> {{ session('success') }}
+                <div class="auto-dismiss fixed top-24 right-8 z-50 p-4 min-w-[300px] text-sm text-emerald-800 rounded-xl bg-emerald-50 border border-emerald-200 shadow-lg transition-opacity duration-500"
+                    role="alert">
+                    <span class="font-bold"><i class="fa-solid fa-circle-check mr-1"></i> Thành công!</span>
+                    {{ session('success') }}
                 </div>
             @endif
 
             @if (session('error'))
-                <div class="auto-dismiss fixed top-24 right-8 z-50 p-4 min-w-[300px] text-sm text-rose-800 rounded-xl bg-rose-50 border border-rose-200 shadow-lg transition-opacity duration-500" role="alert">
-                    <span class="font-bold"><i class="fa-solid fa-circle-exclamation mr-1"></i> Lỗi!</span> {{ session('error') }}
+                <div class="auto-dismiss fixed top-24 right-8 z-50 p-4 min-w-[300px] text-sm text-rose-800 rounded-xl bg-rose-50 border border-rose-200 shadow-lg transition-opacity duration-500"
+                    role="alert">
+                    <span class="font-bold"><i class="fa-solid fa-circle-exclamation mr-1"></i> Lỗi!</span>
+                    {{ session('error') }}
                 </div>
             @endif
             {{-- KẾT THÚC KHỐI THÔNG BÁO --}}
 
             {{-- THÔNG BÁO LỖI TỰ ĐỘNG TỪ VALIDATION ($errors) --}}
             @if ($errors->any())
-                <div class="auto-dismiss fixed top-24 right-8 z-50 p-4 min-w-[300px] text-sm text-rose-800 rounded-xl bg-rose-50 border border-rose-200 shadow-lg transition-opacity duration-500" role="alert">
-                    <div class="font-bold mb-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Vui lòng kiểm tra lại:</div>
+                <div class="auto-dismiss fixed top-24 right-8 z-50 p-4 min-w-[300px] text-sm text-rose-800 rounded-xl bg-rose-50 border border-rose-200 shadow-lg transition-opacity duration-500"
+                    role="alert">
+                    <div class="font-bold mb-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Vui lòng kiểm tra
+                        lại:</div>
                     <ul class="list-disc list-inside">
                         @foreach ($errors->all() as $error)
                             <li>{{ $error }}</li>
@@ -62,20 +68,19 @@
 
     {{-- SCRIPT JS TỰ ĐỘNG TẮT THÔNG BÁO SAU 3 GIÂY --}}
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('DOMContentLoaded', function() {
             const alerts = document.querySelectorAll('.auto-dismiss');
-            alerts.forEach(function (alert) {
+            alerts.forEach(function(alert) {
                 // Đợi 3 giây
-                setTimeout(function () {
+                setTimeout(function() {
                     alert.style.opacity = '0'; // Mờ dần
                     // Đợi thêm 0.5s cho hiệu ứng mờ xong rồi xóa hẳn khỏi HTML
-                    setTimeout(function () {
+                    setTimeout(function() {
                         alert.remove();
-                    }, 500); 
-                }, 3000); 
+                    }, 500);
+                }, 3000);
             });
         });
-
     </script>
     @stack('scripts')
 </body>
