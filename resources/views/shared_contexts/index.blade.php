@@ -77,9 +77,9 @@
                                 </a>
                             </td>
                             <td class="px-6 py-4">
-                                <div class="text-sm text-slate-700 line-clamp-2">
+                                <div class="text-sm text-slate-700 line-clamp-2 format-katex">
                                     {{-- Strip tags để hiển thị text thuần từ TinyMCE --}}
-                                    {{ Str::limit(strip_tags($item->content), 150) }}
+                                    {!! Str::limit(strip_tags($item->content), 150) !!}
                                 </div>
                                 @if ($item->note)
                                     <p class="text-[11px] text-slate-400 mt-1 italic">

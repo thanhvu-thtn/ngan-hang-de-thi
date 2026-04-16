@@ -18,11 +18,10 @@
                     @endif
                 </div>
 
-                {{-- Nút thêm câu hỏi mới - truyền kèm shared_context_id --}}
-                <a href="{{ route('questions.create', ['shared_context_id' => $context->id]) }}"
-                    class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-all shadow-md gap-2">
-                    <i class="fa-solid fa-plus text-xs"></i>
-                    Thêm câu hỏi mới
+                {{-- Nút Quay về danh sách --}}
+                <a href="{{ route('shared-contexts.index') }}"
+                    class="inline-flex items-center px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm font-bold rounded-xl transition-all shadow-sm gap-2">
+                    <i class="fa-solid fa-arrow-left"></i> Quay về
                 </a>
             </div>
 
@@ -30,6 +29,22 @@
             <div class="p-6 prose max-w-none text-slate-700 leading-relaxed min-h-[100px] format-katex">
                 {!! $context->content !!}
             </div>
+            {{-- === DÁN ĐOẠN NÀY VÀO ĐÂY === --}}
+            {{-- Thanh công cụ dưới ô Nội dung --}}
+            <div class="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
+                {{-- Trái: Nút Preview --}}
+                <a href="#"
+                    class="inline-flex items-center px-4 py-2 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 font-semibold rounded-lg transition-colors gap-2 text-sm">
+                    <i class="fa-solid fa-eye"></i> Preview
+                </a>
+
+                {{-- Phải: Nút Thêm câu hỏi mới --}}
+                <a href="{{ route('questions.create', ['shared_context_id' => $context->id]) }}"
+                    class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-all shadow-md gap-2">
+                    <i class="fa-solid fa-plus"></i> Thêm câu hỏi mới
+                </a>
+            </div>
+            {{-- === KẾT THÚC ĐOẠN DÁN === --}}
         </div>
 
         {{-- PHẦN 2: DANH SÁCH CÂU HỎI --}}

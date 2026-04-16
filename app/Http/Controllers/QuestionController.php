@@ -96,24 +96,12 @@ class QuestionController extends Controller
         }
 
         // LƯU LẠI ĐƯỜNG DẪN HIỆN TẠI (BAO GỒM CẢ QUERY LỌC VÀ PHÂN TRANG) VÀO SESSION
-        session()->put('question_index_url', request()->fullUrl());
+        //session()->put('question_index_url', request()->fullUrl());
 
         // 4. Truyền thêm biến $isFiltering sang view
         return view('questions.index', compact('hasNoAssignedTopics', 'treeByGrade', 'questions', 'isFiltering'));
     }
 
-    /**
-     * Bước 1: Giao diện thiết lập thông tin ban đầu
-     */
-    /* public function create()
-    {
-        // Truyền false để không cần đếm câu hỏi cho nhẹ
-        $treeByGrade = $this->permissionService->getAllowedObjectiveTree(auth()->user(), false);
-        $cognitiveLevels = CognitiveLevel::all();
-        $questionTypes = QuestionType::all();
-
-        return view('questions.create', compact('cognitiveLevels', 'questionTypes', 'treeByGrade'));
-    } */
 
     /**
      * Hiển thị giao diện Form tạo câu hỏi CHÍNH
@@ -139,25 +127,7 @@ class QuestionController extends Controller
         return view('questions.create', compact('treeByGrade', 'cognitiveLevels', 'questionTypes', 'user','sharedContextId'));
     }
 
-    /**
-     * Bước 1 (Xử lý): Lưu nháp câu hỏi và Chuyển hướng sang Bước 2
-     */
-    /* public function storeSetup(StoreQuestionSetupRequest $request)
-    {
-        // 1. Validate dữ liệu Bước 1
-        $validated = $request->validated();
 
-        // 2. LƯU VÀO SESSION thay vì Database (Lưu luôn cả objective_ids trong mảng này)
-        session()->put('question_setup', $validated);
-
-        // 3. Lấy mã code và ép về chữ thường để khớp với route (vd: 'es', 'mc')
-        // 3. Lấy mã code (vd: 'ES', 'MC') và chuyển về chữ thường
-        $questionType = QuestionType::find($validated['type']);
-        $typeCode = strtolower($questionType->code);
-
-        // 4. Chuyển hướng sang Bước 2 tương ứng
-        return redirect()->route("questions.{$typeCode}.create");
-    } */
 
     /**
      * Hàm phục vụ AJAX: Trả về file HTML của giao diện con tương ứng
@@ -304,13 +274,6 @@ class QuestionController extends Controller
         }
     }
 
-    /**
-     * Cập nhật thiết lập cơ bản và điều hướng sang trang sửa chi tiết
-     */
-
-    /**
-     * Cập nhật thiết lập cơ bản và điều hướng sang trang sửa chi tiết
-     */
     /**
      * Cập nhật câu hỏi
      */

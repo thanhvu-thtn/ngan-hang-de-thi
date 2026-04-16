@@ -42,33 +42,83 @@ class SharedContextController extends Controller
         return view('shared_contexts.show', compact('context'));
     }
 
-    // Edit
-    public function edit($id) {}
+    // Create - Hiển thị form tạo mới
+    public function create()
+    {
+        return view('shared_contexts.create');
+    }
 
-    // Store
+    // Store - Lưu dữ liệu vào Database
     public function store(Request $request)
     {
-        // Logic để lưu Shared Context mới vào DB
-        // $validatedData = $request->validate([
-        //     'name' => 'required|string|max:255',
-        //     'description' => 'nullable|string',
-        //     // Các trường khác nếu cần
-        // ]);
-        // SharedContext::create($validatedData);
-        // return redirect()->route('shared_contexts.index')->with('success', 'Shared Context đã được tạo thành công.');
+        // 1. Validate dữ liệu
+        $validated = $request->validate([
+            'tag_name' => 'required|string|max:100|unique:shared_contexts,tag_name',
+            'content' => 'required|string',
+            'note' => 'nullable|string',
+        ], [
+            'tag_name.required' => 'Mã định danh không được để trống.',
+            'tag_name.unique' => 'Mã định danh này đã tồn tại.',
+            'content.required' => 'Nội dung văn bản không được để trống.',
+        ]);
+
+        // 2. Tạo mới bản ghi
+        $context = SharedContext::create($validated);
+
+        // 3. Chuyển hướng sang trang show của chính nó kèm thông báo
+        return redirect()->route('shared-contexts.show', $context->id)
+            ->with('success', 'Đã tạo dữ liệu dùng chung thành công!');
     }
 
     // Update
+    // Edit - Hiển thị form chỉnh sửa
+    public function edit($id)
+    {
+        $context = SharedContext::findOrFail($id);
+
+        return view('shared_contexts.edit', compact('context'));
+    }
+
+    // Update - Cập nhật dữ liệu vào Database
     public function update(Request $request, $id)
     {
-        // Logic để cập nhật Shared Context theo $id
-        // $sharedContext = SharedContext::findOrFail($id);
-        // $validatedData = $request->validate([
-        //     'name' => 'required|string|max:255',
-        //     'description' => 'nullable|string',
-        //     // Các trường khác nếu cần
-        // ]);
-        // $sharedContext->update($validatedData);
-        // return redirect()->route('shared_contexts.index')->with('success', 'Shared Context đã được cập nhật thành công.');
+        $context = SharedContext::findOrFail($id);
+
+        // 1. Validate dữ liệu
+        // Lưu ý: unique:shared_contexts,tag_name,'.$id để bỏ qua chính ID hiện tại
+        $validated = $request->validate([
+            'tag_name' => 'required|string|max:100|unique:shared_contexts,tag_name,'.$id,
+            'content' => 'required|string',
+            'note' => 'nullable|string',
+        ], [
+            'tag_name.required' => 'Mã định danh không được để trống.',
+            'tag_name.unique' => 'Mã định danh này đã tồn tại.',
+            'content.required' => 'Nội dung văn bản không được để trống.',
+        ]);
+
+        // 2. Cập nhật bản ghi
+        $context->update($validated);
+
+        // 3. Chuyển hướng về trang show kèm thông báo thành công
+        return redirect()->route('shared-contexts.show', $context->id)
+            ->with('success', 'Đã cập nhật dữ liệu dùng chung thành công!');
+    }
+
+    public function destroy($id)
+    {
+        $context = SharedContext::findOrFail($id);
+
+        // 1. Kiểm tra xem có câu hỏi nào đang dùng shared context này không
+        // Dùng exists() để query thẳng xuống DB cho nhẹ, thay vì load hết list câu hỏi lên
+        if ($context->questions()->exists()) {
+            return redirect()->back()->with('error', 'Không thể xóa! Dữ liệu dùng chung này vẫn còn câu hỏi bên trong. Vui lòng xóa hết các câu hỏi đó trước.');
+        }
+
+        // 2. Nếu an toàn (không có câu hỏi), tiến hành xóa
+        $context->delete();
+
+        // 3. Chuyển hướng về danh sách kèm thông báo
+        return redirect()->route('shared-contexts.index')
+            ->with('success', 'Đã xóa dữ liệu dùng chung thành công!');
     }
 }
