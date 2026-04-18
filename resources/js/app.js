@@ -41,17 +41,29 @@ window.tinymce = tinymce;
 window.tinymceContentCss = contentCss + '\n' + contentUiCss;
 
 // 3. Tự động render KaTeX cho toàn trang khi tải xong
-document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener("DOMContentLoaded", function () {
     const elements = document.querySelectorAll('.format-katex');
     if (elements.length > 0) {
         elements.forEach(el => {
             window.renderMathInElement(el, {
                 delimiters: [
-                    {left: '$$', right: '$$', display: true},
-                    {left: '$', right: '$', display: false},
-                    {left: '\\(', right: '\\)', display: false},
-                    {left: '\\[', right: '\\]', display: true}
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false },
+                    { left: '\\(', right: '\\)', display: false },
+                    { left: '\\[', right: '\\]', display: true }
                 ],
+                macros: {
+                    ",": function (context) {
+                        if (!context || typeof context.future !== 'function') {
+                            return "\\mathord{\\char`,}";
+                        }
+                        var nextToken = context.future();
+                        if (nextToken && nextToken.text === " ") {
+                            return "\\mathpunct{\\char`,}";
+                        }
+                        return "\\mathord{\\char`,}";
+                    }
+                },
                 throwOnError: false
             });
         });

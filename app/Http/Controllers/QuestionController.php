@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreQuestionSetupRequest;
 use App\Models\CognitiveLevel;
 use App\Models\Objective;
 use App\Models\Question;
@@ -15,15 +14,14 @@ use App\QuestionHandlers\MultipleChoiceHandler;
 use App\QuestionHandlers\ShortAnswerHandler;
 use App\QuestionHandlers\TrueFalseHandler;
 use App\Services\ObjectivePermissionService;
+use App\Services\PdfService;
 use App\Services\QuestionImportService;
 use App\Services\WordService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 
 class QuestionController extends Controller
@@ -96,12 +94,11 @@ class QuestionController extends Controller
         }
 
         // LƯU LẠI ĐƯỜNG DẪN HIỆN TẠI (BAO GỒM CẢ QUERY LỌC VÀ PHÂN TRANG) VÀO SESSION
-        //session()->put('question_index_url', request()->fullUrl());
+        // session()->put('question_index_url', request()->fullUrl());
 
         // 4. Truyền thêm biến $isFiltering sang view
         return view('questions.index', compact('hasNoAssignedTopics', 'treeByGrade', 'questions', 'isFiltering'));
     }
-
 
     /**
      * Hiển thị giao diện Form tạo câu hỏi CHÍNH
@@ -124,10 +121,8 @@ class QuestionController extends Controller
         // dd($layouts->toArray());
 
         // Truyền $user sang để hiển thị tên môn học
-        return view('questions.create', compact('treeByGrade', 'cognitiveLevels', 'questionTypes', 'user','sharedContextId'));
+        return view('questions.create', compact('treeByGrade', 'cognitiveLevels', 'questionTypes', 'user', 'sharedContextId'));
     }
-
-
 
     /**
      * Hàm phục vụ AJAX: Trả về file HTML của giao diện con tương ứng
@@ -487,7 +482,29 @@ class QuestionController extends Controller
             return back()->with('error', 'Có lỗi xảy ra trong quá trình lưu dữ liệu: '.$e->getMessage());
         }
     }
+    // ==========================================
+    // Export
+    // ==========================================
 
+    /**
+     * Preview câu hỏi ra file PDF
+     */
+    public function previewQuestionPdf($id, PdfService $pdfService)
+    {
+        // 1. Lấy câu hỏi kèm theo các quan hệ cần thiết
+        $question = Question::with(['questionType', 'layout', 'choices'])->findOrFail($id);
+
+        // 2. Render view HTML ra dạng chuỗi (String)
+        $html = view('questions.preview-pdf', compact('question'))->render();
+
+        // 3. Gọi PdfService để tạo PDF từ HTML
+        $pdfData = $pdfService->generateFromHtml($html);
+
+        // 4. Trả về trình duyệt dạng inline (hiển thị luôn tab mới thay vì tự động tải xuống)
+        return response($pdfData)
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'inline; filename="preview_question_'.$id.'.pdf"');
+    }
     // ==========================================
     // CÁC HÀM HELPER DÙNG CHUNG TRONG CLASS
     // ==========================================

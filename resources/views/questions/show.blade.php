@@ -14,17 +14,32 @@
                         <a href="#" class="text-indigo-600 hover:text-indigo-800 hover:underline transition-colors">Câu
                             hỏi có dữ liệu dùng chung</a> |
                     @endif
-                    Loại: {{ $data['type_name'] }} | Ngày tạo: {{ $data['created_at'] }} | Thứ tự: {{ $data['sort_order'] ?? 0 }}
+                    Loại: {{ $data['type_name'] }} | Ngày tạo: {{ $data['created_at'] }} | Thứ tự:
+                    {{ $data['sort_order'] ?? 0 }}
                 </p>
             </div>
-            <button onclick="window.history.back();"
-                class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-150 shadow-sm cursor-pointer">
-                <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18">
-                    </path>
-                </svg>
-                Quay lại
-            </button>
+            <div class="flex items-center gap-3">
+                {{-- Nút Quay lại --}}
+                <button onclick="window.history.back();"
+                    class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-150 shadow-sm cursor-pointer">
+                    <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    Quay lại
+                </button>
+
+                {{-- Nút Cập nhật --}}
+                <a href="{{ route('questions.edit', $data['id']) }}"
+                    class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors duration-150 shadow-sm cursor-pointer">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z">
+                        </path>
+                    </svg>
+                    Cập nhật
+                </a>
+            </div>
         </div>
 
         <div class="space-y-6">
@@ -112,7 +127,7 @@
                         </svg>
                         2. Nội dung câu hỏi
                     </h2>
-                    <button type="button"
+                    <a href="{{ route('questions.preview-pdf', $data['id']) }}" target="_blank"
                         class="inline-flex items-center px-3 py-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 text-sm font-medium rounded-md transition-colors duration-150 focus:outline-none">
                         <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -121,8 +136,8 @@
                                 d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z">
                             </path>
                         </svg>
-                        Preview
-                    </button>
+                        Preview PDF
+                    </a>
                 </div>
                 <div class="p-6">
 

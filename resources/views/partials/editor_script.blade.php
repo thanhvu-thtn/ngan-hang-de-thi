@@ -178,6 +178,17 @@
                 menubar: false,
                 plugins: ['lists', 'link', 'code', 'table', 'image'],
                 toolbar: 'undo redo | blocks | bold italic underline | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | table image | code',
+                // ==========================================
+                // BẬT TÍNH NĂNG ĐIỀU CHỈNH KHOẢNG CÁCH ẢNH
+                // ==========================================
+                image_advtab: true, // Bật tab Advanced để người dùng có thể tự gõ margin vào ô Style
+                image_class_list: [
+                    {title: 'Mặc định (Dính sát chữ)', value: ''},
+                    {title: 'Bên phải (Tự động cách lề trái)', value: 'float-right ml-4 mb-2'},
+                    {title: 'Bên trái (Tự động cách lề phải)', value: 'float-left mr-4 mb-2'},
+                    {title: 'Căn giữa (Cách đều trên dưới)', value: 'block mx-auto my-4'}
+                ],
+                // ==========================================
                 
                 // ==========================================
                 // CẤU HÌNH UPLOAD ẢNH & CĂN CHỈNH
