@@ -23,6 +23,14 @@
             /* 2. THU HẸP KHOẢNG CÁCH GIỮA PHẦN DẪN VÀ CÁC LỰA CHỌN */
             margin-bottom: 6px;
             text-align: justify;
+            float: left;
+            /* Đẩy span sang trái */
+            margin-right: 5px;
+        }
+
+        .stem p:first-child {
+            display: inline;
+            /* Biến thẻ p đầu tiên thành dạng văn bản thông thường */
         }
 
         .choices-wrapper {
@@ -72,8 +80,22 @@
 <body>
 
     {{-- PHẦN DẪN (STEM) - Luôn luôn in --}}
+    @php
+        $stem = $question->stem;
+        $label = '<span style="font-weight: 600;">Câu 1. </span>';
+
+        // Kiểm tra nếu chuỗi bắt đầu bằng <p>
+        if (str_starts_with(trim($stem), '<p>')) {
+            // Thay thế thẻ <p> đầu tiên bằng <p> kèm nhãn
+            $stem = preg_replace('/<p>/', '<p>' . $label, $stem, 1);
+        } else {
+            // Nếu không có <p>, có thể bạn muốn thêm nhãn vào phía trước luôn
+            $stem = $label . $stem;
+        }
+    @endphp
+
     <div class="stem">
-        {!! $question->stem !!}
+        {!! $stem !!}
     </div>
 
     {{-- PHẦN LỰA CHỌN (Chỉ in nếu là Multiple Choice) --}}

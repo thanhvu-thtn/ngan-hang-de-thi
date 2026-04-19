@@ -41,6 +41,7 @@
                     relative_urls: false,
                     remove_script_host: true,
                     convert_urls: false, 
+                    forced_root_block: false, // Ngăn chặn tự động chèn thẻ <p>
                     skin: false,
                     content_css: false,
                     content_style: tinyStyle + '\n body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 16px; }',
