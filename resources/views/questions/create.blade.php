@@ -1,103 +1,52 @@
 @extends('layouts.main')
 
 @section('content')
-    <div class="container mx-auto p-6 max-w-5xl">
+    <div class="container mx-auto p-6 max-w-5xl" x-data="{
+        questionType: '{{ old('question_type_code', 'MC') }}',
+        tagName: '{{ old('tag_name', '') }}',
+        isCheckingTag: false
+    }">
 
-        {{-- Header --}}
-        <div class="mb-6 flex justify-between items-end">
-            <div>
-                <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-3">
-                    <div class="p-2 bg-blue-500 rounded-lg shadow-lg shadow-blue-200">
-                        <i class="fa-solid fa-plus text-white text-sm"></i>
-                    </div>
-                    Biên soạn câu hỏi mới
-                </h2>
-                <p class="text-slate-500 text-sm mt-1">Môn học: <span
-                        class="font-bold text-blue-600">{{ $user->subject->name ?? 'Chưa phân môn' }}</span></p>
-            </div>
-            <div class="text-right">
-                <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Người soạn</span>
-                <p class="text-sm font-semibold text-slate-700">{{ $user->name }}</p>
-            </div>
-        </div>
-
-        @if ($errors->any())
-            <div class="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl shadow-sm">
-                <ul class="list-disc list-inside text-sm">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
-
-        <form action="{{ route('questions.store') }}" method="POST" id="question-form" enctype="multipart/form-data">
+        <form action="{{ route('questions.store') }}" method="POST" id="question-form">
             @csrf
             @if (isset($sharedContextId))
                 <input type="hidden" name="shared_context_id" value="{{ $sharedContextId }}">
             @endif
+            {{-- PHẦN 1: CẤU HÌNH CHUNG --}}
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
+                <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-gear text-blue-500"></i> Phần 1: Cấu hình chung
+                </h3>
 
-            {{-- BƯỚC 1: CẤU HÌNH NHANH --}}
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
-
-                <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2"><span
-                        class="w-6 h-6 inline-flex items-center justify-center bg-slate-100 rounded-full text-sm mr-2">1</span>
-                    Cấu hình chung</h3>
-                {{-- 1. TÓM TẮT VÀ MÃ ĐỊNH DANH --}}
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    {{-- Tóm tắt nội dung --}}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1">
-                            Tóm tắt nội dung (Name) <span class="text-rose-500">*</span>
-                        </label>
-                        <input type="text" name="name" value="{{ old('name') }}"
-                            class="w-full border border-slate-300 rounded-md bg-transparent px-[5px] py-2 text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors pr-8"
-                            placeholder="Tóm tắt ngắn gọn nội dung câu hỏi')">
-                        @error('name')
-                            <p class="text-sm text-red-500 mt-1"><i class="fa-solid fa-circle-exclamation"></i>
-                                {{ $message }}
-                            </p>
-                        @enderror
-                    </div>
-
-                    {{-- Mã định danh (Dùng Str::uuid() của Laravel để tạo sẵn UUID) --}}
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1">
-                            Mã định danh (Tag Name) <span class="text-rose-500">*</span>
-                        </label>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Mã định danh (Tag name) <span
+                                class="text-rose-500">*</span></label>
                         <div class="relative">
-                            <input type="text" id="tag_name_input" name="tag_name"
-                                value="{{ old('tag_name', (string) \Illuminate\Support\Str::uuid()) }}"
-                                class="w-full border border-slate-300 rounded-md bg-transparent px-[5px] py-2 text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors pr-8">
-                            {{-- Nút X (Clear) --}}
+                            <input type="text" id="tag_name_input" name="tag_name" x-model="tagName" required
+                                class="w-full rounded-lg border-slate-200 focus:ring-blue-500 pr-10 pl-3"
+                                placeholder="VL2B-PT-01">
+
                             <button type="button" id="clear_tag_btn"
-                                class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-rose-500 transition-colors hidden focus:outline-none">
-                                <i class="fa-solid fa-circle-xmark text-lg"></i>
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-rose-500 hidden transition-colors">
+                                <i class="fa-solid fa-circle-xmark"></i>
                             </button>
                         </div>
-                        {{-- Cảnh báo AJAX --}}
-                        <p id="tag_name_warning" class="text-sm text-rose-600 mt-1 hidden font-medium">
-                            <i class="fa-solid fa-triangle-exclamation"></i> Mã định danh này đã có trong CSDL, yêu cầu bạn
-                            gõ
-                            lại nếu không sẽ không lưu câu hỏi được!
+                        <p id="tag_name_warning" class="text-xs text-rose-500 mt-1.5 font-medium hidden">
+                            <i class="fa-solid fa-triangle-exclamation mr-1"></i> Mã định danh này đã tồn tại, vui lòng chọn
+                            mã khác!
                         </p>
-                        @error('tag_name')
-                            <p class="text-sm text-red-500 mt-1"><i class="fa-solid fa-circle-exclamation"></i>
-                                {{ $message }}
-                            </p>
-                        @enderror
                     </div>
 
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6 items-start">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Tóm tắt nội dung</label>
+                        <input type="text" name="name" value="{{ old('name') }}"
+                            class="w-full rounded-lg border-slate-200 p-3" placeholder="VD: Phương trình bậc hai">
+                    </div>
 
-                    {{-- Mức độ --}}
-                    <div class="md:col-span-2">
-                        <label class="block text-sm font-semibold text-slate-700 mb-2">Mức độ nhận thức <span
-                                class="text-rose-500">*</span></label>
-                        <select name="cognitive_level_id"
-                            class="form-select w-full rounded-xl border-slate-300 focus:ring-blue-500" required>
-                            <option value="">-- Chọn mức độ --</option>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Mức độ nhận thức</label>
+                        <select name="cognitive_level_id" class="w-full rounded-lg border-slate-200">
                             @foreach ($cognitiveLevels as $level)
                                 <option value="{{ $level->id }}"
                                     {{ old('cognitive_level_id') == $level->id ? 'selected' : '' }}>
@@ -107,255 +56,282 @@
                         </select>
                     </div>
 
-                    {{-- Loại câu hỏi --}}
-                    <div class="md:col-span-2">
-                        <label class="block text-sm font-semibold text-slate-700 mb-2">Loại câu hỏi <span
-                                class="text-rose-500">*</span></label>
-                        <select name="type_code" id="question_type_select"
-                            class="form-select w-full rounded-xl border-slate-300 focus:ring-blue-500" required>
-                            <option value="">-- Chọn loại câu hỏi --</option>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Loại câu hỏi</label>
+                        <select name="question_type_code" x-model="questionType"
+                            class="w-full rounded-lg border-blue-200 bg-blue-50 font-bold text-blue-700">
                             @foreach ($questionTypes as $type)
-                                <option value="{{ $type->code }}"
-                                    {{ old('type_code') == $type->code ? 'selected' : '' }}>
-                                    {{ $type->name }}
-                                </option>
+                                <option value="{{ $type->code }}">{{ $type->name }}</option>
                             @endforeach
                         </select>
-                    </div>
-                    {{-- Thứ tự hiển thị --}}
-                    <div class="md:col-span-1">
-                        <label for="sort_order" class="block text-sm font-bold text-slate-700 mb-2">Thứ tự</label>
-                        <input type="number" name="sort_order" id="sort_order" value="{{ old('sort_order', 0) }}"
-                            step="1"
-                            class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 text-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm">
-                        @error('sort_order')
-                            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                        @enderror
                     </div>
                 </div>
             </div>
 
-
-
-            {{-- BƯỚC 2: CHỌN MỤC TIÊU (TREEVIEW FULL BỀ NGANG) --}}
+            {{-- PHẦN 2: CHỌN MỤC TIÊU KIẾN THỨC (TREEVIEW) --}}
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
-                <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2"><span
-                        class="w-6 h-6 inline-flex items-center justify-center bg-slate-100 rounded-full text-sm mr-2">2</span>
-                    Chọn mục tiêu kiến thức <span class="text-rose-500">*</span></h3>
+                <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2 border-b border-slate-100 pb-3">
+                    <i class="fa-solid fa-folder-tree text-indigo-500"></i> Phần 2: Chọn mục tiêu kiến thức <span
+                        class="text-rose-500">*</span>
+                </h3>
 
-                <div class="border rounded-xl overflow-hidden bg-slate-50/50">
+                <div class="border border-slate-200 rounded-xl overflow-hidden bg-slate-50/50">
                     @include('questions.partials.treeview', [
                         'treeByGrade' => $treeByGrade,
                         'inputName' => 'objective_ids[]',
                         'showCount' => false,
+                        'selectedObjectives' => old('objective_ids', []), // Hỗ trợ giữ lại tick mục tiêu (cần file treeview hỗ trợ)
                     ])
                 </div>
-                <p class="text-[12px] text-slate-500 mt-3 italic">* Bạn có thể tích chọn một hoặc nhiều mục tiêu cho câu hỏi
-                    này. Bấm vào mũi tên để mở rộng chi nhánh.</p>
+                <p class="text-[12px] text-slate-500 mt-3 italic">
+                    <i class="fa-solid fa-circle-info mr-1"></i> Bạn có thể tích chọn một hoặc nhiều mục tiêu cho câu hỏi
+                    này. Bấm vào mũi tên để mở rộng chi nhánh.
+                </p>
             </div>
 
-            {{-- BƯỚC 3: KHUNG CHỨA NỘI DUNG (Load AJAX) --}}
-            <div id="dynamic-form-container" class="mb-6">
-                <div class="bg-slate-50 border border-dashed border-slate-300 rounded-2xl p-12 text-center text-slate-400">
-                    <i class="fa-solid fa-wand-magic-sparkles text-4xl mb-4 text-slate-200"></i>
-                    <p class="text-base text-slate-600">Hãy chọn <b>Loại câu hỏi</b> ở bước 1 để hiển thị khung soạn thảo
-                        nội dung.</p>
+            {{-- PHẦN 3: NỘI DUNG CÂU HỎI --}}
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
+                <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-file-lines text-emerald-500"></i> Phần 3: Nội dung câu hỏi
+                </h3>
+
+                <div class="mb-6">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-sm font-semibold text-slate-700">Đề bài / Phần dẫn <span
+                                class="text-rose-500">*</span></label>
+                        <div class="flex gap-2">
+                            <button type="button" onclick="window.activateEditor('editor-stem')" class="btn-tiny-edit">
+                                <i class="fa-solid fa-pen-nib"></i> Edit TinyMCE
+                            </button>
+                            <button type="button" onclick="window.previewContent('editor-stem')" class="btn-preview">
+                                <i class="fa-solid fa-eye"></i> Preview
+                            </button>
+                        </div>
+                    </div>
+                    <textarea id="editor-stem" name="stem" rows="4" class="w-full rounded-xl border-slate-200 p-3"
+                        placeholder="Nhập câu hỏi...">{!! old('stem') !!}</textarea>
+                </div>
+
+                <hr class="my-6 border-slate-100">
+
+                {{-- CÁC LỰA CHỌN BIẾN ĐỔI --}}
+
+                <div x-show="questionType === 'MC'" class="space-y-6">
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm font-bold text-slate-600 italic uppercase">Các phương án trả lời:</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4">
+                        @for ($i = 0; $i < 4; $i++)
+                            <div
+                                class="p-4 border border-slate-100 rounded-xl bg-slate-50/50 hover:bg-white hover:shadow-sm transition-all">
+                                <div class="flex justify-between items-center mb-3">
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" name="correct_choice" value="{{ $i }}"
+                                            {{ old('correct_choice', '0') == $i ? 'checked' : '' }}
+                                            class="w-4 h-4 text-blue-600">
+                                        <span class="text-sm font-bold text-slate-600">Phương án {{ $i + 1 }}</span>
+                                    </label>
+                                    <div class="flex gap-2">
+                                        <button type="button"
+                                            onclick="window.activateEditor('choice-{{ $i }}')"
+                                            class="btn-tiny-edit">
+                                            <i class="fa-solid fa-pen-nib"></i> Edit TinyMCE
+                                        </button>
+                                        <button type="button"
+                                            onclick="window.previewContent('choice-{{ $i }}')"
+                                            class="btn-preview">
+                                            <i class="fa-solid fa-eye"></i> Preview
+                                        </button>
+                                    </div>
+                                </div>
+                                <textarea id="choice-{{ $i }}" name="choices[{{ $i }}][content]" rows="2"
+                                    class="w-full border-slate-200 rounded-lg text-sm p-3" placeholder="Nội dung phương án...">{!! old("choices.{$i}.content") !!}</textarea>
+
+                                <div class="mt-3 flex items-center gap-2">
+                                    <span class="text-[10px] font-bold text-slate-400">Chiều dài tương đối của đáp án
+                                        (ratio):</span>
+                                    <input type="number" name="choices[{{ $i }}][ratio]" step="0.1"
+                                        min="0" max="1" value="{{ old("choices.{$i}.ratio", 1) }}"
+                                        class="w-16 text-xs font-bold p-1 border-slate-200 rounded text-center">
+                                </div>
+                            </div>
+                        @endfor
+                    </div>
+
+                    {{-- KHUNG CẤU HÌNH HIỂN THỊ (LAYOUT) CHỈ DÀNH CHO MC --}}
+                    <div class="p-5 border border-blue-100 bg-blue-50/30 rounded-xl">
+                        <div class="flex justify-between items-end mb-2">
+                            <label for="layout_id" class="block text-sm font-bold text-slate-700">
+                                Cấu hình hiển thị đáp án (Layout) <span class="text-rose-500">*</span>
+                            </label>
+                        </div>
+
+                        @php
+                            $defaultLayoutId = isset($layouts) && $layouts->isNotEmpty() ? $layouts->last()->id : '';
+                        @endphp
+
+                        <select id="layout_id" name="layout_id"
+                            class="w-full md:w-1/2 border-slate-200 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 text-sm font-medium text-slate-700 transition-colors cursor-pointer">
+                            <option value="">-- Chọn cách bố trí (Ví dụ: 1x4, 2x2) --</option>
+                            @isset($layouts)
+                                @foreach ($layouts as $layout)
+                                    <option value="{{ $layout->id }}"
+                                        {{ old('layout_id', $defaultLayoutId) == $layout->id ? 'selected' : '' }}>
+                                        {{ $layout->name }}
+                                    </option>
+                                @endforeach
+                            @endisset
+                        </select>
+                    </div>
+                </div>
+
+                <div x-show="questionType === 'TF'" class="p-5 bg-emerald-50 border border-emerald-100 rounded-xl">
+                    <label class="block text-sm font-bold text-emerald-800 mb-3 uppercase tracking-wider">Đáp án
+                        đúng:</label>
+                    <div class="flex gap-8">
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <input type="radio" name="tf_answer" value="Đúng"
+                                {{ old('tf_answer', 'Đúng') == 'Đúng' ? 'checked' : '' }}
+                                class="w-5 h-5 text-emerald-600">
+                            <span class="font-bold text-emerald-700 group-hover:text-emerald-900">Đúng (True)</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <input type="radio" name="tf_answer" value="Sai"
+                                {{ old('tf_answer', 'Sai') == 'Sai' ? 'checked' : '' }} class="w-5 h-5 text-rose-600">
+                            <span class="font-bold text-rose-700 group-hover:text-rose-900">Sai (False)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div x-show="questionType === 'SA'"
+                    class="p-5 bg-purple-50 border border-purple-100 rounded-xl text-center">
+                    <label class="block text-sm font-bold text-purple-800 mb-3 uppercase tracking-wider">Đáp án số (Tối đa
+                        4 ký tự):</label>
+                    <input type="text" name="sa_answer" maxlength="4" value="{{ old('sa_answer') }}"
+                        oninput="this.value = this.value.replace(/[^0-9,-]/g, '');"
+                        class="w-40 text-2xl font-bold text-center border-purple-200 rounded-xl focus:ring-purple-500 shadow-sm"
+                        placeholder="VD: -2,5">
+                </div>
+
+                <div x-show="questionType === 'ES'"
+                    class="p-8 border-2 border-dashed border-slate-200 rounded-xl text-center">
+                    <i class="fa-solid fa-pen-clip text-slate-300 text-3xl mb-2"></i>
+                    <p class="text-sm text-slate-400 italic">Loại tự luận: Không yêu cầu nhập phương án trả lời.</p>
                 </div>
             </div>
 
-            {{-- NÚT THAO TÁC --}}
-            {{-- ==========================================
-                 KHU VỰC NÚT BẤM LƯU CÂU HỎI
-                 ========================================== --}}
-            <div class="mt-8 pt-6 border-t border-slate-200 flex justify-end gap-3">
+            {{-- PHẦN 4: LỜI GIẢI --}}
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-lightbulb text-amber-500"></i> Phần 4: Lời giải chi tiết
+                    </h3>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="window.activateEditor('editor-explanation')"
+                            class="btn-tiny-edit">
+                            <i class="fa-solid fa-pen-nib"></i> Edit TinyMCE
+                        </button>
+                        <button type="button" onclick="window.previewContent('editor-explanation')" class="btn-preview">
+                            <i class="fa-solid fa-eye"></i> Preview
+                        </button>
+                    </div>
+                </div>
+                <textarea id="editor-explanation" name="explanation" rows="4" class="w-full rounded-xl border-slate-200 p-3"
+                    placeholder="Nhập lời giải...">{!! old('explanation') !!}</textarea>
+            </div>
+
+            {{-- NÚT LƯU --}}
+            <div class="flex justify-end gap-4">
                 <a href="{{ route('questions.index') }}"
-                    class="px-6 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 font-semibold transition shadow-sm">
-                    Hủy bỏ
-                </a>
-                <button type="submit" id="btn-submit"
-                    class="px-6 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-bold transition shadow-sm flex items-center gap-2">
-                    <i class="fa-solid fa-floppy-disk"></i>
-                    Lưu vào ngân hàng
+                    class="px-6 py-2.5 rounded-xl border border-slate-300 text-slate-600 font-bold hover:bg-slate-50 transition">Hủy
+                    bỏ</a>
+                <button type="submit"
+                    class="px-10 py-2.5 rounded-xl bg-blue-600 text-white font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition">
+                    <i class="fa-solid fa-floppy-disk mr-2"></i> Lưu câu hỏi
                 </button>
             </div>
         </form>
     </div>
 
-    {{-- Script xử lý Treeview --}}
+    {{-- MODAL PREVIEW --}}
+
+
+
+@endsection
+
+@push('styles')
+    <style>
+        .btn-tiny-edit {
+            @apply text-[11px] px-3 py-1 bg-purple-50 text-purple-600 hover:bg-purple-100 rounded-md border border-purple-200 transition flex items-center gap-1 font-bold;
+        }
+
+        .btn-preview {
+            @apply text-[11px] px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md border border-blue-200 transition flex items-center gap-1 font-bold;
+        }
+    </style>
+@endpush
+
+@push('scripts')
+    @include('partials.editor_script-01')
     @include('questions.partials.treeview_js')
-
-    {{-- Script AJAX xử lý Form động --}}
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const typeSelect = document.getElementById('question_type_select');
-            const container = document.getElementById('dynamic-form-container');
-            const submitBtn = document.getElementById('btn-submit');
-
-            function loadPartialForm(typeCode) {
-                if (!typeCode) {
-                    container.innerHTML =
-                        `<div class="bg-slate-50 border border-dashed border-slate-300 rounded-2xl p-12 text-center text-slate-400"><i class="fa-solid fa-wand-magic-sparkles text-4xl mb-4 text-slate-200"></i><p class="text-base text-slate-600">Hãy chọn <b>Loại câu hỏi</b> ở bước 1 để hiển thị khung soạn thảo nội dung.</p></div>`;
-                    submitBtn.classList.add('hidden');
-                    return;
-                }
-
-                container.innerHTML =
-                    `<div class="bg-white p-12 rounded-2xl border border-slate-200 text-center shadow-sm"><i class="fas fa-spinner fa-spin text-blue-500 text-4xl mb-3"></i><p class="text-slate-500">Đang tải biểu mẫu...</p></div>`;
-
-                fetch(`/questions/get-partial/${typeCode}`)
-                    .then(response => {
-                        if (!response.ok) throw new Error('Network response was not ok');
-                        return response.text();
-                    })
-                    .then(html => {
-                        container.innerHTML = html;
-                        submitBtn.classList.remove('hidden');
-
-                        // 1. KÍCH HOẠT TINYMCE ĐỒNG BỘ
-                        if (window.initEduBankEditor) {
-                            window.initEduBankEditor('#editor-stem, #editor-explanation, .editor-choice');
-                        }
-
-                        // 2. RENDER TOÁN HỌC (Nếu đề bài đang tải lại từ validation lỗi)
-                        if (typeof renderMathInElement === "function") {
-                            renderMathInElement(container, {
-                                delimiters: [{
-                                        left: '$$',
-                                        right: '$$',
-                                        display: true
-                                    },
-                                    {
-                                        left: '$',
-                                        right: '$',
-                                        display: false
-                                    },
-                                    {
-                                        left: '\\(',
-                                        right: '\\)',
-                                        display: false
-                                    },
-                                    {
-                                        left: '\\[',
-                                        right: '\\]',
-                                        display: true
-                                    }
-                                ]
-                            });
-                        }
-                    })
-                    .catch(error => {
-                        container.innerHTML =
-                            `<div class="p-8 bg-red-50 text-red-600 rounded-2xl border border-red-200 text-center"><i class="fa-solid fa-triangle-exclamation text-3xl mb-2"></i><p>Chưa có giao diện cho loại câu hỏi này.</p></div>`;
-                        submitBtn.classList.add('hidden');
-                    });
-            }
-
-            // ĐOẠN MỚI: CHÉP VÀO ĐÂY
-            let currentTypeCode = typeSelect.value;
-
-            typeSelect.addEventListener('change', function() {
-                const newTypeCode = this.value;
-
-                if (currentTypeCode && currentTypeCode !== newTypeCode) {
-                    const isConfirm = confirm(
-                        'Bạn có chắc chắn muốn đổi loại câu hỏi? Toàn bộ nội dung bạn vừa soạn thảo ở bên dưới sẽ bị xóa sạch.'
-                    );
-
-                    if (!isConfirm) {
-                        this.value = currentTypeCode;
-                        return;
-                    }
-                }
-
-                currentTypeCode = newTypeCode;
-                loadPartialForm(newTypeCode);
-            });
-
-            // Tự động load nếu có old value (khi bị lỗi validate)
-            if (typeSelect.value) {
-                loadPartialForm(typeSelect.value);
-            }
-        });
-
         // ==========================================
         // XỬ LÝ NÚT CLEAR VÀ AJAX CHECK TAG_NAME
         // ==========================================
-        const tagInput = document.getElementById('tag_name_input');
-        const clearBtn = document.getElementById('clear_tag_btn');
-        const warningMsg = document.getElementById('tag_name_warning');
+        document.addEventListener("DOMContentLoaded", function() {
+            const tagInput = document.getElementById('tag_name_input');
+            const clearBtn = document.getElementById('clear_tag_btn');
+            const warningMsg = document.getElementById('tag_name_warning');
 
-        // Hàm ẩn/hiện nút X dựa trên độ dài text
-        const toggleClearBtn = () => {
-            if (tagInput.value.length > 0) {
-                clearBtn.classList.remove('hidden');
-            } else {
-                clearBtn.classList.add('hidden');
-            }
-        };
+            // Hàm ẩn/hiện nút X dựa trên độ dài text
+            const toggleClearBtn = () => {
+                if (tagInput.value.length > 0) {
+                    clearBtn.classList.remove('hidden');
+                } else {
+                    clearBtn.classList.add('hidden');
+                }
+            };
 
-        // Khởi chạy lần đầu lúc load trang
-        toggleClearBtn();
-
-        // Khi người dùng gõ
-        tagInput.addEventListener('input', () => {
+            // Khởi chạy lần đầu lúc load trang
             toggleClearBtn();
-            warningMsg.classList.add('hidden'); // Đang gõ thì ẩn cảnh báo cũ đi
-        });
 
-        // Bấm nút X xóa sạch
-        clearBtn.addEventListener('click', () => {
-            tagInput.value = '';
-            toggleClearBtn();
-            warningMsg.classList.add('hidden');
-            tagInput.focus(); // Đưa con trỏ chuột trở lại ô
-        });
+            // Khi người dùng gõ
+            tagInput.addEventListener('input', () => {
+                toggleClearBtn();
+                warningMsg.classList.add('hidden'); // Đang gõ thì ẩn cảnh báo cũ đi
+                tagInput.classList.remove('border-rose-500', 'ring-rose-500'); // Xóa viền đỏ khi sửa
+            });
 
-        // Khi rời khỏi ô (blur) -> Gọi AJAX
-        tagInput.addEventListener('blur', function() {
-            const val = this.value.trim();
-            if (!val) return; // Nếu trống thì không gọi API
+            // Bấm nút X xóa sạch
+            clearBtn.addEventListener('click', () => {
+                tagInput.value = '';
+                // Nếu dùng AlpineJS thì phải dispatch event để nó update x-model
+                tagInput.dispatchEvent(new Event('input'));
+                toggleClearBtn();
+                warningMsg.classList.add('hidden');
+                tagInput.classList.remove('border-rose-500', 'ring-rose-500');
+                tagInput.focus(); // Đưa con trỏ chuột trở lại ô
+            });
 
-            fetch(`/questions/check-tag-name?tag_name=${encodeURIComponent(val)}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.exists) {
-                        warningMsg.classList.remove('hidden'); // Hiện đỏ
-                        tagInput.classList.add('border-rose-500', 'ring-rose-500'); // Tô viền đỏ
-                    } else {
-                        warningMsg.classList.add('hidden'); // Ẩn cảnh báo
-                        tagInput.classList.remove('border-rose-500', 'ring-rose-500'); // Bỏ viền đỏ
-                    }
-                })
-                .catch(err => console.error('Lỗi khi kiểm tra tag_name:', err));
+            // Khi rời khỏi ô (blur) -> Gọi AJAX
+            tagInput.addEventListener('blur', function() {
+                const val = this.value.trim();
+                if (!val) return; // Nếu trống thì không gọi API
+
+                fetch(`/questions/check-tag-name?tag_name=${encodeURIComponent(val)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.exists) {
+                            warningMsg.classList.remove('hidden'); // Hiện đỏ
+                            tagInput.classList.add('border-rose-500', 'ring-rose-500'); // Tô viền đỏ
+                        } else {
+                            warningMsg.classList.add('hidden'); // Ẩn cảnh báo
+                            tagInput.classList.remove('border-rose-500', 'ring-rose-500'); // Bỏ viền đỏ
+                        }
+                    })
+                    .catch(err => console.error('Lỗi khi kiểm tra tag_name:', err));
+            });
         });
     </script>
-    <script>
-        function formatShortAnswer(input) {
-            let val = input.value;
-
-            // 1. Tự động chuyển tất cả dấu chấm (.) thành phẩy (,)
-            val = val.replace(/\./g, ',');
-
-            // 2. Loại bỏ mọi ký tự lạ (chỉ giữ số, phẩy, trừ)
-            val = val.replace(/[^0-9,-]/g, '');
-
-            // 3. Dấu trừ (-) CHỈ được phép nằm ở vị trí đầu tiên
-            val = val.replace(/(?!^)-/g, '');
-
-            // 4. BẮT BUỘC TRƯỚC DẤU PHẨY PHẢI CÓ SỐ
-            // a. Nếu dấu phẩy đứng ngay đầu tiên -> xóa nó
-            val = val.replace(/^,/, '');
-            // b. Nếu dấu phẩy đứng ngay sau dấu trừ -> giữ lại dấu trừ, xóa dấu phẩy
-            val = val.replace(/^-,/, '-');
-
-            // 5. Chỉ cho phép tối đa 1 dấu phẩy (,)
-            let parts = val.split(',');
-            if (parts.length > 2) {
-                val = parts[0] + ',' + parts.slice(1).join('');
-            }
-
-            input.value = val;
-        }
-    </script>
-    @include('partials.editor_script', ['selector' => '#editor-stem, #editor-explanation, .editor-choice'])
-@endsection
+@endpush

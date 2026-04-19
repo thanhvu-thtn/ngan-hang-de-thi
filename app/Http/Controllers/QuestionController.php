@@ -118,10 +118,12 @@ class QuestionController extends Controller
         $cognitiveLevels = CognitiveLevel::all();
 
         $questionTypes = QuestionType::all();
-        // dd($layouts->toArray());
+        // dd($layouts->toArray())
+        $layouts= QuestionLayout::all();
+
 
         // Truyền $user sang để hiển thị tên môn học
-        return view('questions.create', compact('treeByGrade', 'cognitiveLevels', 'questionTypes', 'user', 'sharedContextId'));
+        return view('questions.create', compact('treeByGrade', 'cognitiveLevels', 'questionTypes', 'user', 'sharedContextId', 'layouts'));
     }
 
     /**
@@ -145,9 +147,8 @@ class QuestionController extends Controller
      */
     // QuestionController.php
 
-    public function store(Request $request)
+    /* public function store(Request $request)
     {
-        // dd($request->all());
         // 1. Xác định Handler dựa trên loại câu hỏi
         // $handler = $this->getHandler($request->question_type_id);
         $handler = $this->getHandlerByCode($request->type_code); // Tạm thời hardcode để test, sau này sẽ lấy từ $request->question_type_id
@@ -190,7 +191,79 @@ class QuestionController extends Controller
                 ->withInput();
         }
     }
+ */
+    public function store(Request $request)
+    {
+        // 1. Lấy mã loại câu hỏi từ form (MC, TF, SA, ES)
+        $typeCode = $request->input('question_type_code');
 
+        // Lấy ID tương ứng với Code (Nếu bác lưu DB bằng question_type_id)
+        $typeId = $this->getQuestionTypeIdByCode($typeCode);
+        $request->merge(['question_type_id' => $typeId]);
+
+        // 2. LỌC DỮ LIỆU RÁC DỰA THEO LOẠI CÂU HỎI
+        // (VD: Đang chọn ES mà trước đó lỡ gõ SA thì xóa dữ liệu SA đi)
+        $data = $request->all();
+
+        switch ($typeCode) {
+            case 'ES':
+                unset($data['choices'], $data['tf_answer'], $data['sa_answer'], $data['is_correct_index']);
+                break;
+
+            case 'TF':
+                unset($data['choices'], $data['sa_answer'], $data['is_correct_index']);
+                // Gán luôn đáp án đúng/sai vào để đưa đi validate
+                $data['tf_answer'] = $request->input('tf_answer', 'True');
+                break;
+
+            case 'SA':
+                unset($data['choices'], $data['tf_answer'], $data['is_correct_index']);
+                break;
+
+            case 'MC':
+                unset($data['tf_answer'], $data['sa_answer']);
+                // Xử lý xác định đáp án đúng cho MC
+                $correctIndex = $request->input('is_correct_index');
+                if (isset($data['choices']) && is_array($data['choices'])) {
+                    foreach ($data['choices'] as $index => &$choice) {
+                        $choice['is_correct'] = ($index == $correctIndex);
+                    }
+                    unset($choice); // <--- THÊM DÒNG NÀY ĐỂ CẮT ĐỨT THAM CHIẾU
+                }
+                break;
+        }
+
+        // Cập nhật lại request bằng dữ liệu "sạch"
+        $request->replace($data);
+
+        // 3. LẤY HANDLER VÀ XỬ LÝ
+        try {
+            $handler = $this->getHandlerByCode($typeCode);
+
+            // Bác có thể có hàm xử lý riêng hoặc dùng hàm chung của Handler
+            // Giả sử các Handler của bác đều có hàm store/validateData như sau:
+
+            // Validate chung + Validate riêng (tùy vào logic trong Handler của bác)
+            //dd($request->all()); // Dừng lại để kiểm tra dữ liệu đã được làm sạch và chuẩn hóa chưa trước khi validate
+            $validatedData = $handler->validateRequest($request);
+
+            // Gọi logic lưu vào DB (Cắt ảnh, tạo Question, tạo Choices...)
+            // $handler->store($validatedData); Hoặc $handler->storeQuestion(...)
+             //dd($validatedData); // Dừng lại để kiểm tra dữ liệu đã được validate sạch sẽ chưa trước khi lưu vào DB
+            $question = $handler->store($validatedData);
+
+            // Giả sử em dùng logic mẫu (bác thay bằng tên hàm bác đã định nghĩa trong Handler):
+            // $question = clone $handler->storeQuestion($data, $validatedData);
+
+            return redirect()->route('questions.index')
+                ->with('success', 'Câu hỏi đã được tạo thành công!');
+
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->withInput($request->all()) // Trả lại toàn bộ dữ liệu sạch để form giữ nguyên trạng thái
+                ->withErrors(['error' => 'Có lỗi xảy ra: '.$e->getMessage()]);
+        }
+    }
     // -----------------------------------------------------------------
 
     public function show($id)

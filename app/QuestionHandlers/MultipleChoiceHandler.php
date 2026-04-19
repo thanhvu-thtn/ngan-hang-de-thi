@@ -116,6 +116,7 @@ class MultipleChoiceHandler extends BaseQuestionHandler
      */
     protected function getSpecificUpdateRules(Request $request): array
     {
+        //dd($request->all()); // Dừng lại để kiểm tra dữ liệu đã được làm sạch và chuẩn hóa chưa trước khi validate
         return [
             'choices' => 'required|array|size:4', // Phải có đúng 4 phương án
             'choices.*.content' => 'required|string',      // Từng phương án không được rỗng

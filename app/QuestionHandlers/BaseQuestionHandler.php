@@ -403,8 +403,8 @@ abstract class BaseQuestionHandler implements QuestionHandlerInterface
             'stem' => 'required|string',
             'explanation' => 'nullable|string',
 
-            // Validate mảng Chuẩn đầu ra (nếu có tick chọn)
-            'objective_ids' => 'nullable|array',
+            // Validate mảng Chuẩn đầu ra (BẮT BUỘC CHỌN ÍT NHẤT 1)
+            'objective_ids' => 'required|array|min:1',
             'objective_ids.*' => 'exists:objectives,id',
 
             'status' => 'nullable|numeric',
@@ -428,6 +428,7 @@ abstract class BaseQuestionHandler implements QuestionHandlerInterface
             'shared_context_id.exists' => 'Dữ liệu dùng chung không hợp lệ.',
             'sort_order.integer' => 'Thứ tự phải là một số nguyên.',
             'sort_order.min' => 'Thứ tự phải lớn hơn hoặc bằng 0.',
+            'objective_ids.required' => 'Vui lòng chọn ít nhất một Mục tiêu cần đạt.',
         ];
 
         // 4. GỌI HOOK LẤY LUẬT VÀ THÔNG BÁO TỪ CLASS CON (MultipleChoice, ShortAnswer,...)
