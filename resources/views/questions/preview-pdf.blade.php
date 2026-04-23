@@ -72,6 +72,20 @@
             max-width: 100%;
             height: auto;
         }
+
+        /* XÓA BỎ MARGIN MẶC ĐỊNH CỦA THẺ DANH SÁCH (ol, ul) */
+        ol,
+        ul {
+            margin-top: 0;
+            margin-bottom: 0;
+            /* Giữ nguyên padding-left để không bị mất số/dấu chấm đầu dòng */
+        }
+
+        /* XÓA MARGIN GIỮA CÁC THẺ LI (nếu bác muốn các dòng trong list cũng sát nhau) */
+        li {
+            margin-top: 0;
+            margin-bottom: 0;
+        }
     </style>
 
     {{-- NẾU CÂU HỎI CỦA BÁC CÓ TOÁN HỌC (KaTeX), BÁC MỞ COMMENT ĐOẠN DƯỚI ĐỂ NHÚNG KATEX VÀO NHÉ --}}
